@@ -20,6 +20,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/commands', [CommandController::class, 'store']);
 
+    Route::get('/commands/{command}', [CommandController::class, 'show']);
+
     Route::post('/commands/{command}/request', [CommandController::class, 'updateClientRequest']);
 
     Route::post('/commands/{command}/response', [CommandController::class, 'updateHostResponse']);

@@ -16,7 +16,7 @@ class HostResponseResource extends JsonResource
     {
         return [
             'command_id'       => $this->id,
-            'is_host_finished' => $this->has_host_response,
+            'has_host_response' => $this->has_host_response,
 
             // Extracting the conditional payload data safely
             'success'          => $this->host_payload['success'] ?? false,

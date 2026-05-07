@@ -9,6 +9,7 @@ This API facilitates communication between an **Android Client** (sender) and a 
 | `POST` | `/api/login`                  | Login to receive Bearer Token         |
 | `POST` | `/api/devices`                | Register a new desktop host           |
 | `POST` | `/api/commands`               | Initialize a new command record       |
+| `POST` | `/api/commands/{id}`          | Fetch command details                 |
 | `POST` | `/api/commands/{id}/request`  | Android: Send payload/instructions    |
 | `POST` | `/api/commands/{id}/response` | Java Host: Submit result & screenshot |
 
@@ -78,7 +79,28 @@ This API facilitates communication between an **Android Client** (sender) and a 
 
 ---
 
-## 4. Submit Client Request (Android)
+## 4. Fetch Request or Response
+
+**URL:** `/api/commands/{id}`  
+**Description:** Checking of new requests or updates
+
+### Request Body (JSON)
+
+```json
+{
+  "client_payload": {
+    "actions": [
+      { "type": "move_mouse", "x": 500, "y": 300 },
+      { "type": "click", "button": "left" },
+      { "type": "type_text", "text": "Hello World" }
+    ]
+  }
+}
+```
+
+---
+
+## 5. Submit Client Request (Android)
 
 **URL:** `/api/commands/{id}/request`  
 **Description:** Attaches the specific actions to the command record.
@@ -99,7 +121,7 @@ This API facilitates communication between an **Android Client** (sender) and a 
 
 ---
 
-## 5. Submit Host Response (Java Host)
+## 6. Submit Host Response (Java Host)
 
 **URL:** `/api/commands/{id}/response`  
 **Description:** The Java desktop agent uploads execution results and a screenshot.

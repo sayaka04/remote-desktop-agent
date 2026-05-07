@@ -102,6 +102,8 @@ class CommandController extends Controller
 
         // 2. Update the command with results and flip the flag
         $command->update([
+            'has_client_request' => false, // Keep existing client request flag
+            'client_payload'     => [], // Keep existing client payload
             'host_payload'       => $request->input('host_payload'),
             'screenshot_path'    => $screenshotPath,
             'has_host_response'  => true, // TRUE! Now the Android app can read the result.
@@ -115,7 +117,7 @@ class CommandController extends Controller
      */
     public function show(Command $command)
     {
-        //
+        return new ClientRequestResource($command);
     }
 
     /**

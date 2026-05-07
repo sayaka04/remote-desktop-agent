@@ -23,24 +23,23 @@ class ClientRequestResource extends JsonResource
             }),
 
             'payload' => [
-                'actions' => collect($this->client_payload['actions'])->map(function ($action) {
-                    // Create array and immediately filter out NULL values
-                    return array_filter([
-                        'type'   => $action['type'],
-                        'x'      => $action['x'] ?? null,
-                        'y'      => $action['y'] ?? null,
-                        'button' => $action['button'] ?? null,
-                        'amount' => $action['amount'] ?? null,
-                        'text'   => $action['text'] ?? null,
-                    ], function ($value) {
-                        return !is_null($value); // Only keep the key if the value is not null
-                    });
-                })->values()->all()
+                'actions' => (isset($this->client_payload['actions']) && is_array($this->client_payload['actions']))
+                    ? collect($this->client_payload['actions'])->map(function ($action) {
+                        return array_filter([
+                            'type'   => $action['type'] ?? 'unknown',
+                            'x'      => $action['x'] ?? null,
+                            'y'      => $action['y'] ?? null,
+                            'button' => $action['button'] ?? null,
+                            'amount' => $action['amount'] ?? null,
+                            'text'   => $action['text'] ?? null,
+                        ], fn($value) => !is_null($value));
+                    })->values()->all()
+                    : [] // If it's just [], return an empty actions list
             ],
 
             // The flags
-            'is_pending_host'    => $this->has_client_request,
-            'is_host_finished'   => $this->has_host_response,
+            'has_client_request'    => $this->has_client_request,
+            'has_host_response'   => $this->has_host_response,
 
             // Timestamps are useful for the Android app to calculate timeouts
             'requested_at'       => $this->created_at->toIso8601String(),
