@@ -10,15 +10,24 @@ import java.nio.file.Path;
 
 public class ApiController {
 
-    public JsonObject requestData(){
-        String response = ApiClient.get("/commands/" + Config.get("api.device_id"));
-        JsonObject json = Json.parseObject(response);
+    public JsonObject requestData() {
+        try {
+            String response = ApiClient.get("/commands/" + Config.get("api.device_id"));
+            JsonObject json = Json.parseObject(response);
 
-        // --- TODO: Remove prints
-        System.out.println(response);
-        System.out.println(Json.toJson(json));
+            // --- TODO: Add debug mode
+            System.out.println(response);
+            System.out.println(Json.toJson(json));
 
-        return Json.getObject(json, "data");
+            return Json.getObject(json, "data");
+
+        } catch (Exception e) {
+
+            // --- TODO: Add debug mode
+            System.out.println("Failed to request data: " + e.getMessage());
+
+            return null;
+        }
     }
 
     public String respond() {
@@ -36,8 +45,9 @@ public class ApiController {
 
             return response;
         } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+            System.out.println("Failed to respond data: " + e.getMessage());
+
+            return null;        }
     }
 
 

@@ -6,15 +6,10 @@ public class PollingTimer {
     final int MAX_INTERVAL_SEC = 30;
     long lastActiveTime = System.currentTimeMillis();
 
-
-
     public void reset(){
         currentIntervalSec = 1;
         lastActiveTime = System.currentTimeMillis();
     }
-
-
-
 
     public void update() {
         // --- Calculate time since last activity
@@ -33,7 +28,6 @@ public class PollingTimer {
             currentIntervalSec = 1;
         }
     }
-
 
     public void sleep() {
         try {

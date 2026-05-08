@@ -3,7 +3,6 @@
     import com.google.gson.JsonArray;
     import com.google.gson.JsonObject;
     import remoteagent.api.ApiController;
-    import remoteagent.utils.Action;
     import remoteagent.utils.Json;
 
     import java.awt.*;
@@ -52,33 +51,16 @@
                 System.out.println("Action Type: " + Json.getString(actionObj, "type"));
                 String type = Json.getString(actionObj, "type");
                 switch (Objects.requireNonNull(type)) {
-
-                    case "move_mouse":
-                        int x = Json.getInt(actionObj, "x");
-                        int y = Json.getInt(actionObj, "y");
-                        robot.mouseMove(x, y);
-                        break;
-
-                    case "click":
-                        String button = Json.getString(actionObj, "button");
-                        int mask = button.equals("right") ? InputEvent.BUTTON3_DOWN_MASK : InputEvent.BUTTON1_DOWN_MASK;
-                        robot.mousePress(mask);
-                        robot.mouseRelease(mask);
-                        break;
-                    case "type_text":
-                        String text = Json.getString(actionObj, "text");
-                        if (text != null) {
-                            for (char c : text.toCharArray()) {
-                                Action.typeChar(robot, c); // Using a helper for keyboard logic
-                            }
-                        }
-                        break;
-                    //TODO: Add new type called paste_text and perhaps Ctrl+A too and Ctrl+C and Ctrl-V
-                    //  case "type_text":
-                    //      String textToType = Json.getString(actionObj, "text");
-                    //      System.out.println("Pasting text: " + textToType);
-                    //      pasteText(robot, textToType);
-                    //      break;
+                    case "move_mouse" ->
+                            ActionHandler.handleMove(robot, Json.getInt(actionObj, "x"), Json.getInt(actionObj, "y"));
+                    case "click" ->
+                            ActionHandler.handleClick(robot, Json.getString(actionObj, "button"));
+                    case "type_text" ->
+                            ActionHandler.handleType(robot, Json.getString(actionObj, "text"));
+                    case "paste_text" ->
+                            ActionHandler.handlePaste(robot, Json.getString(actionObj, "text"));
+                    case "select_all" ->
+                            ActionHandler.handleCtrlA(robot);
                 }
             });
         }
@@ -88,7 +70,7 @@
             JsonObject data = apiController.requestData();
 
             // --- 2. Check for Actionable commands
-            if (Json.getBool(data, "has_client_request")) {
+            if (data != null && Json.getBool(data, "has_client_request")) {
 
                 // --- PATH A: Active Task Execution ---
 
@@ -101,7 +83,7 @@
                 }
 
                 // --- 5A. Take screenshot
-                if (Action.takeScreenshot()) {
+                if (ActionHandler.takeScreenshot()) {
 
                     //TODO: Remove print
                     System.out.println("Screenshot indeed taken!");
@@ -114,6 +96,7 @@
                 pollingTimer.reset();
             } else {
                 // --- PATH B: Inactivity Backoff Logic ---
+                // --- Also Can be triggered by sudden lost of connection, or api exceptions
                 pollingTimer.update();
             }
 
