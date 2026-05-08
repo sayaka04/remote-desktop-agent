@@ -1,4 +1,4 @@
-package remoteagent;
+package remoteagent.utils;
 
 import com.google.gson.*;
 

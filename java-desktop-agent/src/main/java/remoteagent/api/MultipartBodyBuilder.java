@@ -1,4 +1,4 @@
-package remoteagent;
+package remoteagent.api;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;

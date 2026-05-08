@@ -1,4 +1,8 @@
-package remoteagent;
+package remoteagent.api;
+
+import com.google.gson.JsonObject;
+import remoteagent.utils.Config;
+import remoteagent.utils.Json;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -6,9 +10,15 @@ import java.nio.file.Path;
 
 public class ApiController {
 
-    public String getNewData(){
-        String response = ApiClient.get("/commands/1");
-        return response;
+    public JsonObject requestData(){
+        String response = ApiClient.get("/commands/" + Config.get("api.device_id"));
+        JsonObject json = Json.parseObject(response);
+
+        // --- TODO: Remove prints
+        System.out.println(response);
+        System.out.println(Json.toJson(json));
+
+        return Json.getObject(json, "data");
     }
 
     public String respond() {
@@ -21,7 +31,7 @@ public class ApiController {
                             "image/png");
 
             String response = ApiClient.post(
-                    "/commands/1/response", data
+                    "/commands/" + Config.get("api.device_id") + "/response", data
             );
 
             return response;

@@ -1,4 +1,4 @@
-package remoteagent;
+package remoteagent.utils;
 
 import java.io.IOException;
 import java.io.InputStream;
