@@ -1,0 +1,25 @@
+/* Target by class, just like the web! */
+.main-window {
+    -fx-background-color: #2b2b2b;
+    -fx-padding: 20px;
+}
+
+.nav-bar {
+    -fx-padding: 10px;
+    -fx-background-color: #3c3f41;
+    -fx-spacing: 15px; /* Adds space between buttons */
+}
+
+/* Target the buttons */
+.nav-btn {
+    -fx-background-color: #007bff;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand; /* Changes mouse to pointer on hover */
+}
+
+/* Add a hover effect! */
+.nav-btn:hover {
+    -fx-background-color: #0056b3;
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="remoteagent.controller.WindowController"
+      stylesheets="@../css/styles.css"
+      styleClass="main-window">
+
+    <HBox spacing="10" styleClass="nav-bar">
+<!--        <Button text="Menu" styleClass="nav-btn"/> -->
+        <Button text="Exit" styleClass="nav-btn" onAction="#exitApp"/>
+    </HBox>
+
+
+    <!-- TODO: Add Toggle switch for turning on and off API process   -->
+
+    <TextArea fx:id="logArea"
+              text="System ready..."
+              VBox.vgrow="ALWAYS"
+              styleClass="log-area"/>
+
+</VBox>
