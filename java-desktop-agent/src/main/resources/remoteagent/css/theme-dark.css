@@ -1,0 +1,26 @@
+.root {
+    -fx-primary: #FAFAFA;
+    -fx-on-primary: #18181B;
+    -fx-primary-container: #27272A;
+    -fx-on-primary-container: #FAFAFA;
+
+    -fx-background: #09090B;
+    -fx-on-background: #FAFAFA;
+
+    -fx-background: #09090B;
+    -fx-background-variant: #121214;
+    -fx-background-variant-alt: #18181B;
+
+    -fx-on-background: #FAFAFA;
+    -fx-on-background-variant: #D4D4D8;
+    -fx-on-background-variant-alt: #A1A1AA;
+
+    -fx-surface: #18181B;
+    -fx-on-surface: #FAFAFA;
+    -fx-surface-variant: #27272A;
+    -fx-on-surface-variant: #A1A1AA;
+
+    -fx-outline: #3F3F46;
+    -fx-error: #F87171;
+    -fx-on-error: #450A0A;
+}

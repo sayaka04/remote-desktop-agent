@@ -1,8 +1,12 @@
 package remoteagent.controller;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.application.Platform; // Add this import
+import javafx.scene.control.ToggleButton;
+import remoteagent.handler.JobHandler;
+import remoteagent.utils.LogUtil;
 
 public class WindowController {
 
@@ -12,21 +16,51 @@ public class WindowController {
     @FXML
     public void initialize() {
         System.out.println("Controller loaded!");
-        logArea.setText("System ready and Controller linked!");
+        writeToLog(LogUtil.LogType.INFO, "System ready and Controller linked!");
     }
 
-    public void writeToLog(String message) {
+    @FXML
+    public void handleOpenConfig() {
+        System.out.println("Opening config...");
+        // Add your config logic here
+    }
+
+    public void writeToLog(LogUtil.LogType type, String message) {
         // Platform.runLater ensures this works even if called from a background thread
         Platform.runLater(() -> {
-            logArea.appendText(message + "\n");
+            logArea.appendText(LogUtil.format(type, message));
         });
     }
 
     // THIS IS THE MISSING PIECE:
     @FXML
     public void exitApp() {
-        System.out.println("Exiting...");
+        writeToLog(LogUtil.LogType.INFO, "Exiting!");
         Platform.exit();
         System.exit(0);
+    }
+
+    @FXML
+    private ToggleButton toggleSwitchProcess;
+
+    @FXML
+    public void handleToggleProcess() {
+        if (toggleSwitchProcess.isSelected()) {
+            toggleSwitchProcess.setText("Close Process");
+            jobHandler.start();
+            writeToLog(LogUtil.LogType.INFO, "Process turned on!");
+            toggleSwitchProcess.getStyleClass().remove("btn-off");
+            toggleSwitchProcess.getStyleClass().add("btn-on");
+        } else {
+            toggleSwitchProcess.setText("Start Process");
+            jobHandler.stop();
+            writeToLog(LogUtil.LogType.INFO, "Process turned off!");
+            toggleSwitchProcess.getStyleClass().remove("btn-on");
+            toggleSwitchProcess.getStyleClass().add("btn-off");
+        }
+    }
+    JobHandler jobHandler;
+    public void setJobHandler(JobHandler jobHandler){
+        this.jobHandler = jobHandler;
     }
 }

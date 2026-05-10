@@ -3,7 +3,9 @@
     import com.google.gson.JsonArray;
     import com.google.gson.JsonObject;
     import remoteagent.api.ApiController;
+    import remoteagent.controller.WindowController;
     import remoteagent.utils.Json;
+    import remoteagent.utils.LogUtil;
 
     import java.awt.*;
     import java.awt.event.InputEvent;
@@ -15,26 +17,45 @@
 
         ApiController apiController = new ApiController();
         PollingTimer pollingTimer = new PollingTimer();
+        private Thread workerThread;
 
-        public void start(){
-            if (isRunning) return;
-            isRunning = true;
-
-            try {
-                final Robot robot = new Robot();
-                robot.setAutoDelay(50);                 // --- Small delay so the OS can keep up
-
-                while (isRunning) {
-                    performJob(robot);
-                }
-
-            } catch (AWTException e) {
-                throw new RuntimeException(e);
-            }
+        WindowController windowController;
+        public void setWindowController(WindowController windowController){
+            this.windowController = windowController;
+            apiController.setWindowController(this.windowController);
         }
 
-        public void stop(){
+        public void start() {
+            // Prevent duplicate threads
+            if (workerThread != null && workerThread.isAlive()) {
+                windowController.writeToLog(LogUtil.LogType.WARN, "Already running.");
+                return;
+            }
+            isRunning = true;
+            workerThread = new Thread(() -> {
+                try {
+                    Robot robot = new Robot();
+                    robot.setAutoDelay(50);
+                    while (isRunning) {
+                        windowController.writeToLog(LogUtil.LogType.INFO, "Running: " + isRunning);
+                        performJob(robot);
+                    }
+                    windowController.writeToLog(LogUtil.LogType.INFO, "Worker loop exited.");
+
+                } catch (AWTException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            workerThread.start();
+            windowController.writeToLog(LogUtil.LogType.WARN, "Worker started.");
+        }
+
+        public void stop() {
             isRunning = false;
+            if (workerThread != null) {
+                workerThread.interrupt();
+            }
+            windowController.writeToLog(LogUtil.LogType.WARN, "Stopped.");
         }
 
 
@@ -86,7 +107,7 @@
                 if (ActionHandler.takeScreenshot()) {
 
                     //TODO: Remove print
-                    System.out.println("Screenshot indeed taken!");
+                    windowController.writeToLog(LogUtil.LogType.WARN, "Screenshot taken.");
 
                     // --- 6A. Return screenshot and success message
                     apiController.respond();
@@ -103,5 +124,6 @@
             // --- Finally. REJOIN: Pause the loop for the calculated amount of time (Sleep Logic)
             pollingTimer.sleep();
         }
+
 
     }

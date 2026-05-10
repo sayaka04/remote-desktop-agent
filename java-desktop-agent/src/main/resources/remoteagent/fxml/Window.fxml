@@ -3,23 +3,31 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx"
+<VBox fx:id="rootBox"
+      xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="remoteagent.controller.WindowController"
-      stylesheets="@../css/styles.css"
-      styleClass="main-window">
+      stylesheets="@../css/styles.css, @../css/theme-dark.css"
+      styleClass="root-window">
 
-    <HBox spacing="10" styleClass="nav-bar">
-<!--        <Button text="Menu" styleClass="nav-btn"/> -->
-        <Button text="Exit" styleClass="nav-btn" onAction="#exitApp"/>
-    </HBox>
+    <MenuButton text="Options" styleClass="dropdown-minimal">
+        <items>
+            <MenuItem text="Open Config" onAction="#handleOpenConfig"/>
+            <MenuItem text="Exit" onAction="#exitApp"/>
+        </items>
+    </MenuButton>
 
-
-    <!-- TODO: Add Toggle switch for turning on and off API process   -->
-
-    <TextArea fx:id="logArea"
-              text="System ready..."
-              VBox.vgrow="ALWAYS"
-              styleClass="log-area"/>
+    <VBox styleClass="content-area" VBox.vgrow="ALWAYS">
+        <HBox styleClass="nav-bar">
+            <ToggleButton fx:id="toggleSwitchProcess" text="Start Process" styleClass="btn-toggle" onAction="#handleToggleProcess"/>
+            <!-- <Region HBox.hgrow="ALWAYS" /> -->
+            <!-- <Button text="Exit" styleClass="btn-exit" onAction="#exitApp"/> -->
+        </HBox>
+        <TextArea fx:id="logArea"
+                  text=""
+                  VBox.vgrow="ALWAYS"
+                  styleClass="log-area"
+                  editable="false"/>
+    </VBox>
 
 </VBox>

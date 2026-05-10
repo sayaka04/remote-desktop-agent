@@ -1,25 +1,148 @@
-/* Target by class, just like the web! */
+/* Base Layout */
 .main-window {
-    -fx-background-color: #2b2b2b;
-    -fx-padding: 20px;
+    -fx-background-color: -fx-background-variant;
+    -fx-padding: 24px;
+    -fx-spacing: 16px;
 }
 
 .nav-bar {
-    -fx-padding: 10px;
-    -fx-background-color: #3c3f41;
-    -fx-spacing: 15px; /* Adds space between buttons */
+    -fx-alignment: center-left;
+    -fx-spacing: 12px;
 }
 
-/* Target the buttons */
-.nav-btn {
-    -fx-background-color: #007bff;
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
+/* Content Area - gives the padding back to the TextArea */
+.content-area {
+    /* Top: 0, Right: 24px, Bottom: 24px, Left: 24px */
+    -fx-padding: 0 24px 24px 24px;
+}
+
+/* Global Button Reset */
+.button, .toggle-button {
+    -fx-font-family: "Segoe UI", "Inter", sans-serif;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
-    -fx-cursor: hand; /* Changes mouse to pointer on hover */
+    -fx-padding: 8px 16px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
 }
 
-/* Add a hover effect! */
-.nav-btn:hover {
-    -fx-background-color: #0056b3;
+/* Toggle Button (Process) */
+.btn-toggle {
+    -fx-background-color: -fx-surface;
+    -fx-text-fill: -fx-on-surface;
+}
+
+.btn-toggle:hover {
+    -fx-background-color: -fx-outline;
+}
+
+/* Toggle Button ON State */
+.btn-toggle:selected {
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: -fx-on-primary;
+}
+
+/* Exit Button */
+.btn-exit {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-error;
+    -fx-border-color: -fx-outline;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+}
+
+.btn-exit:hover {
+    -fx-background-color: -fx-error;
+    -fx-text-fill: -fx-on-error;
+    -fx-border-color: -fx-error;
+}
+
+/* Text Area Styling */
+.log-area {
+    -fx-font-family: "Consolas", "Monaco", monospace;
+    -fx-font-size: 13px;
+    -fx-background-color: -fx-surface;
+    -fx-control-inner-background: -fx-surface;
+    -fx-text-fill: -fx-on-surface;
+    -fx-background-radius: 8px;
+    -fx-border-color: -fx-outline;
+    -fx-border-radius: 8px;
+    -fx-padding: 4px;
+}
+
+.log-area .content {
+    -fx-background-color: transparent;
+}
+
+/* Minimalist Scrollbars */
+.log-area .scroll-bar:vertical,
+.log-area .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.log-area .thumb {
+    -fx-background-color: -fx-surface-variant;
+    -fx-background-radius: 4px;
+}
+
+.log-area .increment-button,
+.log-area .decrement-button {
+    -fx-padding: 0;
+}
+
+
+
+/* Minimalist MenuButton */
+.dropdown-minimal {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 6px 12px;
+}
+
+.dropdown-minimal:hover {
+    -fx-background-color: -fx-surface-variant;
+    -fx-background-radius: 6px;
+}
+
+/* Text inside the main MenuButton */
+.dropdown-minimal .label {
+    -fx-font-family: "Segoe UI", "Inter", sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-on-background;
+}
+
+/* The arrow icon next to the text */
+.dropdown-minimal .arrow {
+    -fx-background-color: -fx-on-background-variant;
+}
+
+/* The Popup Menu Box */
+.dropdown-minimal .context-menu {
+    -fx-background-color: -fx-surface;
+    -fx-border-color: -fx-outline;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-padding: 4px 0;
+}
+
+/* The individual items inside the popup */
+.dropdown-minimal .menu-item {
+    -fx-background-color: transparent;
+    -fx-padding: 6px 16px;
+}
+
+/* The text of the items */
+.dropdown-minimal .menu-item .label {
+    -fx-text-fill: -fx-on-surface;
+    -fx-font-family: "Segoe UI", "Inter", sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: normal;
+}
+
+/* Hover state for the items */
+.dropdown-minimal .menu-item:focused {
+    -fx-background-color: -fx-surface-variant;
+    -fx-cursor: hand;
 }
