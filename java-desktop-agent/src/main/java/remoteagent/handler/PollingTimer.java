@@ -1,9 +1,13 @@
 package remoteagent.handler;
 
+import remoteagent.utils.Config;
+
 public class PollingTimer {
 
     int currentIntervalSec = 1;
-    final int MAX_INTERVAL_SEC = 30;
+    int maxIntervalSec = Config.getInt("poll.max_interval_sec")*1000;
+    long timeoutSec = Config.getInt("poll.timeout_sec")*1000; // 120,000 milliseconds
+
     long lastActiveTime = System.currentTimeMillis();
 
     public void reset(){
@@ -14,14 +18,13 @@ public class PollingTimer {
     public void update() {
         // --- Calculate time since last activity
         long inactiveDurationMs = System.currentTimeMillis() - lastActiveTime;
-        long twoMinutesMs = 2 * 60 * 1000; // 120,000 milliseconds
 
         // --- Evaluate if 2 minutes have passed
-        if (inactiveDurationMs >= twoMinutesMs) {
+        if (inactiveDurationMs >= timeoutSec) {
             // --- Start increasing interval by 2 seconds, capped at MAX
             currentIntervalSec += 2;
-            if (currentIntervalSec > MAX_INTERVAL_SEC) {
-                currentIntervalSec = MAX_INTERVAL_SEC;
+            if (currentIntervalSec > maxIntervalSec) {
+                currentIntervalSec = maxIntervalSec;
             }
         } else {
             // --- Still inside the 2-minute window, keep interval at 1s
@@ -39,6 +42,15 @@ public class PollingTimer {
             System.out.println("Polling interrupted!");
             Thread.currentThread().interrupt();
         }
+    }
+
+    public void reloadConfig(){
+        maxIntervalSec = Config.getInt("poll.max_interval_sec") * 1000;
+        timeoutSec = Config.getInt("poll.timeout_sec") * 1000;
+
+        System.out.println("Reloaded:");
+        System.out.println("maxIntervalSec=" + maxIntervalSec);
+        System.out.println("timeoutSec=" + timeoutSec);
     }
 
 }

@@ -16,7 +16,7 @@
         boolean isRunning = false;
 
         ApiController apiController = new ApiController();
-        PollingTimer pollingTimer = new PollingTimer();
+        public PollingTimer pollingTimer = new PollingTimer();
         private Thread workerThread;
 
         WindowController windowController;

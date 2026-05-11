@@ -13,6 +13,7 @@
     <MenuButton text="Options" styleClass="dropdown-minimal">
         <items>
             <MenuItem text="Open Config" onAction="#handleOpenConfig"/>
+            <MenuItem text="Reload Config" onAction="#handleReloadConfig"/>
             <MenuItem text="Exit" onAction="#exitApp"/>
         </items>
     </MenuButton>

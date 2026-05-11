@@ -1,18 +1,16 @@
 package remoteagent.controller;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
-import javafx.application.Platform; // Add this import
+import javafx.application.Platform;
 import javafx.scene.control.ToggleButton;
 import remoteagent.handler.JobHandler;
+import remoteagent.utils.Config;
 import remoteagent.utils.LogUtil;
 
 public class WindowController {
 
-
-    private static final int MAX_LOG_LINES = 20;
-    private int currentLineCount = 0;
+    private static int maxLogLines = Config.getInt("log.max_lines");
 
     @FXML
     private TextArea logArea;
@@ -25,8 +23,8 @@ public class WindowController {
 
     @FXML
     public void handleOpenConfig() {
-        System.out.println("Opening config...");
-        // Add your config logic here
+        writeToLog(LogUtil.LogType.INFO, "Opening Config file!");
+        Config.openConfigFile();
     }
 
     public void writeToLog(LogUtil.LogType type, String message) {
@@ -36,7 +34,7 @@ public class WindowController {
 
             int totalRows = logArea.getParagraphs().size();
             System.out.println("Total rows: " + totalRows);
-            if (totalRows > MAX_LOG_LINES) {
+            if (totalRows > maxLogLines) {
                 // --- 1. Get every single piece of text currently in the box
                 String allText = logArea.getText();
                 // --- 2. Find exactly where the first line ends
@@ -77,6 +75,14 @@ public class WindowController {
             toggleSwitchProcess.getStyleClass().add("btn-off");
         }
     }
+
+    public void handleReloadConfig(){
+        Config.reload();
+        maxLogLines = Config.getInt("log.max_lines");
+        jobHandler.pollingTimer.reloadConfig();
+        writeToLog(LogUtil.LogType.INFO, "Reloading Config file!");
+    }
+
     JobHandler jobHandler;
     public void setJobHandler(JobHandler jobHandler){
         this.jobHandler = jobHandler;

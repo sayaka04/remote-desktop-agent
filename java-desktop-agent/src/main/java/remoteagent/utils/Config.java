@@ -1,7 +1,13 @@
 package remoteagent.utils;
 
+import java.awt.*;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 public class Config {
@@ -13,20 +19,39 @@ public class Config {
         reload();
     }
 
+    static File file = null;
+
+    public static void openConfigFile() {
+
+        // IMPORTANT: use real file on disk (not classpath)
+        file = Paths.get(CONFIG_FILE).toFile();
+
+        if (!file.exists()) {
+            throw new IllegalArgumentException("Config file not found: " + file.getAbsolutePath());
+        }
+
+        try {
+            Desktop.getDesktop().open(file);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static synchronized void reload() {
         properties.clear();
 
-        try (InputStream input =
-                     Config.class.getClassLoader()
-                             .getResourceAsStream(CONFIG_FILE)) {
+        file = Paths.get(CONFIG_FILE).toFile();
 
-            if (input == null) {
-                throw new RuntimeException(CONFIG_FILE + " not found");
-            }
+        if (!file.exists()) {
+            throw new RuntimeException("Config file not found: " + file.getAbsolutePath());
+        }
+
+        try (InputStream input = new FileInputStream(file)) {
 
             properties.load(input);
 
-            System.out.println("Config reloaded.");
+            System.out.println("Config reloaded from: " + file.getAbsolutePath());
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to reload config", e);
