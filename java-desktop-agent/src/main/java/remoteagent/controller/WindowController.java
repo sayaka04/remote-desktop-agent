@@ -10,6 +10,10 @@ import remoteagent.utils.LogUtil;
 
 public class WindowController {
 
+
+    private static final int MAX_LOG_LINES = 20;
+    private int currentLineCount = 0;
+
     @FXML
     private TextArea logArea;
 
@@ -29,6 +33,20 @@ public class WindowController {
         // Platform.runLater ensures this works even if called from a background thread
         Platform.runLater(() -> {
             logArea.appendText(LogUtil.format(type, message));
+
+            int totalRows = logArea.getParagraphs().size();
+            System.out.println("Total rows: " + totalRows);
+            if (totalRows > MAX_LOG_LINES) {
+                // --- 1. Get every single piece of text currently in the box
+                String allText = logArea.getText();
+                // --- 2. Find exactly where the first line ends
+                int firstNewline = allText.indexOf('\n');
+                // --- 3. Make sure a newline actually exists
+                if (firstNewline != -1) {
+                    // --- 4. Grab everything AFTER that first newline and overwrite the text area
+                    logArea.setText(allText.substring(firstNewline + 1));
+                }
+            }
         });
     }
 
