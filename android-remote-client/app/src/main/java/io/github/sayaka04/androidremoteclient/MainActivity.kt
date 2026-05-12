@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
@@ -78,7 +79,7 @@ fun ImageAnnotationDemo() {
 
     val context = LocalContext.current
 
-    // Stable Wikimedia URL for prototyping
+    // Using stable URL to guarantee it loads
     val mapImageUrl = "https://cdn.hswstatic.com/gif/maps.jpg"
     val painter = rememberAsyncImagePainter(model = mapImageUrl)
 
@@ -108,15 +109,17 @@ fun ImageAnnotationDemo() {
             Button(
                 onClick = {
                     if (lastCoordinate != null) {
+                        // Math to convert the 0.0-1.0 scale to a 0-100 whole number
                         val pctX = (lastCoordinate!!.percentX * 100).toInt()
                         val pctY = (lastCoordinate!!.percentY * 100).toInt()
                         val imgX = lastCoordinate!!.imagePixelX.toInt()
                         val imgY = lastCoordinate!!.imagePixelY.toInt()
 
-                        val message = "Pixels: ($imgX, $imgY)\nPercentage: ($pctX%, $pctY%)"
+                        // Formatting the alert string
+                        val message = "Set! Px: ($imgX, $imgY) | Pct: ($pctX%, $pctY%)"
                         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     } else {
-                        Toast.makeText(context, "Tap the map to pin first!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Please drag the pointer onto the map first!", Toast.LENGTH_LONG).show()
                     }
                 },
                 modifier = Modifier.weight(1f).padding(start = 4.dp)
@@ -127,8 +130,7 @@ fun ImageAnnotationDemo() {
 
         lastCoordinate?.let { coord ->
             Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                Text("Screen Tap: (${coord.screenX.toInt()}, ${coord.screenY.toInt()})")
-                Text("Map Percent: X:${(coord.percentX * 100).toInt()}% Y:${(coord.percentY * 100).toInt()}%")
+                Text("Current Pointer: X:${(coord.percentX * 100).toInt()}% Y:${(coord.percentY * 100).toInt()}%")
             }
         }
 
@@ -155,8 +157,6 @@ fun ZoomableCoordinateImagePicker(
     resetTrigger: Int = 0,
     onCoordinateSelected: (CoordinateData) -> Unit
 ) {
-    val context = LocalContext.current
-
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
@@ -176,72 +176,86 @@ fun ZoomableCoordinateImagePicker(
         val boxW = with(density) { maxWidth.toPx() }
         val boxH = with(density) { maxHeight.toPx() }
 
+        // Core calculation for pinpointing coordinates
+        val updatePin: (Offset) -> Unit = { tapOffset ->
+            val imgIntrinsic = painter.intrinsicSize
+            if (imgIntrinsic != Size.Unspecified && imgIntrinsic.width > 0f && imgIntrinsic.height > 0f) {
+                val baseScale = min(boxW / imgIntrinsic.width, boxH / imgIntrinsic.height)
+                val dispW = imgIntrinsic.width * baseScale
+                val dispH = imgIntrinsic.height * baseScale
+                val marginX = (boxW - dispW) / 2f
+                val marginY = (boxH - dispH) / 2f
+
+                val dx = tapOffset.x - boxW / 2
+                val dy = tapOffset.y - boxH / 2
+                val unzoomedDx = (dx - offsetX) / scale
+                val unzoomedDy = (dy - offsetY) / scale
+                val tapBoxX = unzoomedDx + boxW / 2
+                val tapBoxY = unzoomedDy + boxH / 2
+
+                val imgX = tapBoxX - marginX
+                val imgY = tapBoxY - marginY
+
+                // Ensure cursor stays within map bounds 0.0 -> 1.0
+                val pctX = (imgX / dispW).coerceIn(0f, 1f)
+                val pctY = (imgY / dispH).coerceIn(0f, 1f)
+
+                selectedPercent = Offset(pctX, pctY)
+                onCoordinateSelected(
+                    CoordinateData(
+                        screenX = tapOffset.x,
+                        screenY = tapOffset.y,
+                        imagePixelX = pctX * imgIntrinsic.width,
+                        imagePixelY = pctY * imgIntrinsic.height,
+                        percentX = pctX,
+                        percentY = pctY,
+                        scale = scale,
+                        panX = offsetX,
+                        panY = offsetY
+                    )
+                )
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(boxW, boxH) {
-                    detectTapGestures(
-                        onDoubleTap = {
+                // 1. Handle Dragging the Cursor (Selecting Mode)
+                .pointerInput(isSelectionMode, scale, offsetX, offsetY, boxW, boxH) {
+                    if (isSelectionMode) {
+                        detectDragGestures(
+                            onDragStart = { offset -> updatePin(offset) },
+                            onDrag = { change, _ ->
+                                updatePin(change.position)
+                                change.consume()
+                            }
+                        )
+                    }
+                }
+                // 2. Handle Tapping the Cursor (Selecting Mode) OR Double Tap Reset (Panning Mode)
+                .pointerInput(isSelectionMode, scale, offsetX, offsetY, boxW, boxH) {
+                    if (isSelectionMode) {
+                        detectTapGestures(onTap = { offset -> updatePin(offset) })
+                    } else {
+                        detectTapGestures(onDoubleTap = {
                             scale = 1f
                             offsetX = 0f
                             offsetY = 0f
-                        },
-                        onTap = { tapOffset ->
-                            if (!isSelectionMode) return@detectTapGestures
-
-                            val imgIntrinsic = painter.intrinsicSize
-                            if (imgIntrinsic == Size.Unspecified || imgIntrinsic.width <= 0f || imgIntrinsic.height <= 0f) {
-                                Toast.makeText(context, "Image not fully loaded yet!", Toast.LENGTH_SHORT).show()
-                                return@detectTapGestures
-                            }
-
-                            val baseScale = min(boxW / imgIntrinsic.width, boxH / imgIntrinsic.height)
-                            val dispW = imgIntrinsic.width * baseScale
-                            val dispH = imgIntrinsic.height * baseScale
-                            val marginX = (boxW - dispW) / 2f
-                            val marginY = (boxH - dispH) / 2f
-
-                            val dx = tapOffset.x - boxW / 2
-                            val dy = tapOffset.y - boxH / 2
-                            val unzoomedDx = (dx - offsetX) / scale
-                            val unzoomedDy = (dy - offsetY) / scale
-                            val tapBoxX = unzoomedDx + boxW / 2
-                            val tapBoxY = unzoomedDy + boxH / 2
-
-                            val imgX = tapBoxX - marginX
-                            val imgY = tapBoxY - marginY
-
-                            val pctX = imgX / dispW
-                            val pctY = imgY / dispH
-
-                            if (pctX in 0f..1f && pctY in 0f..1f) {
-                                selectedPercent = Offset(pctX, pctY)
-                                onCoordinateSelected(
-                                    CoordinateData(
-                                        screenX = tapOffset.x,
-                                        screenY = tapOffset.y,
-                                        imagePixelX = pctX * imgIntrinsic.width,
-                                        imagePixelY = pctY * imgIntrinsic.height,
-                                        percentX = pctX,
-                                        percentY = pctY,
-                                        scale = scale,
-                                        panX = offsetX,
-                                        panY = offsetY
-                                    )
-                                )
-                            }
-                        }
-                    )
+                        })
+                    }
                 }
-                .pointerInput(boxW, boxH) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        val newScale = (scale * zoom).coerceIn(1f, 10f)
-                        val maxX = max(0f, (boxW * newScale - boxW) / 2)
-                        val maxY = max(0f, (boxH * newScale - boxH) / 2)
+                // 3. Handle Zooming and Panning the Map (Panning Mode)
+                .pointerInput(isSelectionMode, boxW, boxH) {
+                    if (!isSelectionMode) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            val newScale = (scale * zoom).coerceIn(1f, 10f)
+                            val maxX = max(0f, (boxW * newScale - boxW) / 2)
+                            val maxY = max(0f, (boxH * newScale - boxH) / 2)
 
-                        scale = newScale
-                        offsetX = (offsetX + pan.x).coerceIn(-maxX, maxX)
-                        offsetY = (offsetY + pan.y).coerceIn(-maxY, maxY)
+                            scale = newScale
+                            offsetX = (offsetX + pan.x).coerceIn(-maxX, maxX)
+                            offsetY = (offsetY + pan.y).coerceIn(-maxY, maxY)
+                        }
                     }
                 }
         ) {
@@ -259,6 +273,7 @@ fun ZoomableCoordinateImagePicker(
                     )
             )
 
+            // Drawing the Cursor over the image
             Canvas(modifier = Modifier.fillMaxSize()) {
                 selectedPercent?.let { pct ->
                     val imgIntrinsic = painter.intrinsicSize
@@ -286,10 +301,10 @@ fun ZoomableCoordinateImagePicker(
 
                         val drawCenter = Offset(screenX, screenY)
 
-                        drawCircle(color = Color.Cyan, radius = 8.dp.toPx(), center = drawCenter, style = Stroke(width = 2.dp.toPx()))
-                        drawCircle(color = Color.Red, radius = 2.dp.toPx(), center = drawCenter)
-                        drawLine(color = Color.Cyan, start = Offset(screenX - 16.dp.toPx(), screenY), end = Offset(screenX + 16.dp.toPx(), screenY), strokeWidth = 2.dp.toPx())
-                        drawLine(color = Color.Cyan, start = Offset(screenX, screenY - 16.dp.toPx()), end = Offset(screenX, screenY + 16.dp.toPx()), strokeWidth = 2.dp.toPx())
+                        drawCircle(color = Color.Cyan, radius = 10.dp.toPx(), center = drawCenter, style = Stroke(width = 2.dp.toPx()))
+                        drawCircle(color = Color.Red, radius = 3.dp.toPx(), center = drawCenter)
+                        drawLine(color = Color.Cyan, start = Offset(screenX - 20.dp.toPx(), screenY), end = Offset(screenX + 20.dp.toPx(), screenY), strokeWidth = 2.dp.toPx())
+                        drawLine(color = Color.Cyan, start = Offset(screenX, screenY - 20.dp.toPx()), end = Offset(screenX, screenY + 20.dp.toPx()), strokeWidth = 2.dp.toPx())
                     }
                 }
             }
