@@ -62,5 +62,6 @@ dependencies {
     implementation("androidx.activity:activity-compose")
 
     // Coil for web images
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
 }
