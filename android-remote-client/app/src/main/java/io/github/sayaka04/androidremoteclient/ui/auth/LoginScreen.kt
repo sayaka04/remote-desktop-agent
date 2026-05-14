@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun LoginForm(logInViewModel: LoginViewModel = viewModel()) {
+fun LoginScreen(logInViewModel: LoginViewModel = viewModel()) {
 
     val context = LocalContext.current
 

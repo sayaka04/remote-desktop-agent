@@ -16,8 +16,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.sayaka04.androidremoteclient.ui.client.ClientScreen
 
-import io.github.sayaka04.androidremoteclient.ui.auth.LoginForm
+import io.github.sayaka04.androidremoteclient.ui.auth.LoginScreen
+import io.github.sayaka04.androidremoteclient.ui.command.CommandScreen
 import io.github.sayaka04.androidremoteclient.ui.host.HostScreen
 
 class MainActivity : AppCompatActivity() {
@@ -40,7 +42,7 @@ fun MainScreen() {
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-    val tabs = listOf("Home", "Commands", "[?]")
+    val tabs = listOf("Home", "Commands", "Client", "[?]")
 
     Scaffold(
         topBar = {
@@ -82,8 +84,9 @@ fun MainScreen() {
 
                 when (selectedTabIndex) {
                     0 -> HostScreen()
-                    1 -> Text("Commands")
-                    2 -> LoginForm()
+                    1 -> CommandScreen()
+                    2 -> ClientScreen()
+                    3 -> LoginScreen()
                 }
             }
         }

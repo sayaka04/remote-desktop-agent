@@ -10,11 +10,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import io.github.sayaka04.androidremoteclient.ui.command.CommandViewModel
 import io.github.sayaka04.androidremoteclient.ui.host.components.ZoomableMapView
 import io.github.sayaka04.androidremoteclient.ui.host.components.HostControlPanel
 
 @Composable
-fun HostScreen(hostViewModel: HostViewModel = viewModel()) {
+fun HostScreen(hostViewModel: HostViewModel = viewModel(), commandViewModel: CommandViewModel = viewModel()) {
 
     val hostState by hostViewModel.state.collectAsState()
     val context = LocalContext.current
@@ -52,9 +53,10 @@ fun HostScreen(hostViewModel: HostViewModel = viewModel()) {
                 hostViewModel.incrementResetTrigger()
             },
             onSet = {
+                commandViewModel.insertIntoActionMove(hostState.percentX, hostState.percentY)
                 Toast.makeText(
                     context,
-                    "(${hostState.imagePixelX.toInt()}, ${hostState.imagePixelY.toInt()})",
+                    "(${hostState.imagePixelX.toInt()}, ${hostState.imagePixelY.toInt()}) -> (${hostState.percentX}, ${hostState.percentY})",
                     Toast.LENGTH_SHORT
                 ).show()
             }
