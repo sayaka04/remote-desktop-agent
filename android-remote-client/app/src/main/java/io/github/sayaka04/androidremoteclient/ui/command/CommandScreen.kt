@@ -1,41 +1,21 @@
 package io.github.sayaka04.androidremoteclient.ui.command
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-
 @Composable
-fun CommandScreen(commandViewModel: CommandViewModel = viewModel()){
-
+fun CommandScreen(commandViewModel: CommandViewModel = viewModel()) {
     val context = LocalContext.current
-
     val commandState by commandViewModel.state.collectAsState()
-
-    var showDialog by remember {
-        mutableStateOf(false)
-    }
+    var showDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -43,70 +23,39 @@ fun CommandScreen(commandViewModel: CommandViewModel = viewModel()){
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
-
         Column(
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-
             Text(
                 text = "Commands",
                 style = MaterialTheme.typography.headlineMedium
             )
 
+            // 1. Mouse Click Section
+            Column(Modifier.weight(1f)) {
+                Text(text = "Mouse Click")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        commandViewModel.insertIntoActionClick(ClickType.LEFT)
+                        Toast.makeText(context, "Added Left Click", Toast.LENGTH_SHORT).show()
+                    }) { Text("Left") }
 
-            Column(Modifier.weight(1f)){
-                Row()
-                {
-                    Text(
-                        text = "Mouse Click",
-                    )
-                    Button(
-                        onClick = {
-                            commandViewModel.insertIntoActionClick(ClickType.LEFT)
-                            Toast.makeText(
-                                context,
-                                "Hello, ${ClickType.MIDDLE}.",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                    Button(onClick = {
+                        commandViewModel.insertIntoActionClick(ClickType.MIDDLE)
+                        Toast.makeText(context, "Added Middle Click", Toast.LENGTH_SHORT).show()
+                    }) { Text("Middle") }
 
-                        },
-                    ) {
-                        Text("Left")
-                    }
-                    Button(
-                        onClick = {
-                            commandViewModel.insertIntoActionClick(ClickType.MIDDLE)
-                            Toast.makeText(
-                                context,
-                                "Hello, ${ClickType.MIDDLE}.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                        },
-                    ) {
-                        Text("Middle")
-                    }
-                    Button(
-                        onClick = {
-                            commandViewModel.insertIntoActionClick(ClickType.RIGHT)
-                            Toast.makeText(
-                                context,
-                                "Hello, ${ClickType.RIGHT}.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                        },
-                    ) {
-                        Text("Right")
-                    }
+                    Button(onClick = {
+                        commandViewModel.insertIntoActionClick(ClickType.RIGHT)
+                        Toast.makeText(context, "Added Right Click", Toast.LENGTH_SHORT).show()
+                    }) { Text("Right") }
                 }
             }
 
-
+            // 2. Keyboard Type Section
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = "Keyboard Type",
-                )
+                Text(text = "Keyboard Type")
                 OutlinedTextField(
                     value = commandState.textFieldInput,
                     onValueChange = { commandViewModel.updateTextField(it) },
@@ -117,70 +66,66 @@ fun CommandScreen(commandViewModel: CommandViewModel = viewModel()){
                 Button(
                     onClick = {
                         commandViewModel.insertIntoActionTypeText(commandState.textFieldInput)
-                        Toast.makeText(
-                            context,
-                            "Hello, ${commandState.textFieldInput}.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
+                        Toast.makeText(context, "Added Text: ${commandState.textFieldInput}", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Submit")
+                    Text("Submit Text Action")
                 }
             }
 
+            // 3. Network Action Section (NEW)
+            Column(Modifier.weight(1.5f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
-
-            Column(Modifier.weight(1f)) {
+                // Read Local ArrayList
                 Button(
-                    onClick = {
-                        Toast.makeText(
-                            context,
-                            "Command Actions:\n" + commandViewModel.getCommandActionLists(),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        showDialog = true
-
-                    },
+                    onClick = { showDialog = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Read from ArrayList")
+                }
+
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Send to Server
+                Button(
+                    onClick = { commandViewModel.sendCommandsToServer("1") }, // "1" is deviceId
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !commandState.isNetworkLoading
+                ) {
+                    Text("Send Actions to Server")
+                }
+
+                // Fetch from Server
+                Button(
+                    onClick = { commandViewModel.requestDataFromHost("1") }, // "1" is deviceId
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !commandState.isNetworkLoading
+                ) {
+                    Text("Get Host Response")
+                }
+
+                // Display Host Response
+                if (commandState.hostMessage.isNotEmpty()) {
+                    Text(
+                        text = "Host Status: ${commandState.hostMessage}",
+                        color = if (commandState.isHostTaskSuccessful) Color(0xFF2E7D32) else Color.Red,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
         }
     }
 
+    // Dialog for viewing current list
     if (showDialog) {
-
         AlertDialog(
-
-            onDismissRequest = {
-                showDialog = false
-            },
-
-            title = {
-                Text("Commands")
-            },
-
-            text = {
-                Text(
-                    commandViewModel.getCommandActionLists()
-                )
-            },
-
+            onDismissRequest = { showDialog = false },
+            title = { Text("Queued Commands") },
+            text = { Text(commandViewModel.getCommandActionLists()) },
             confirmButton = {
-
-                Button(
-                    onClick = {
-                        showDialog = false
-                    }
-                ) {
-
-                    Text("OK")
-                }
+                Button(onClick = { showDialog = false }) { Text("OK") }
             }
         )
     }
-
 }

@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,12 +33,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun ClientScreen(clientViewModel: ClientViewModel = viewModel()) {
 
+
+
     val context = LocalContext.current
 
     val clientState by clientViewModel.state.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
-
+    LaunchedEffect(Unit) {
+        PreferenceDatastoreUtil.setClientDetails(context, clientViewModel)
+    }
     var showDialog by remember {
         mutableStateOf(false)
     }

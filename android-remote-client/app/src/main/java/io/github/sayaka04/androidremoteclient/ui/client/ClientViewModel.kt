@@ -15,7 +15,6 @@ class ClientViewModel: ViewModel(){
         //
     }
 
-
     fun updateApiBaseUrl(newApiBaseUrl: String){
         _state.update { currentState ->
             currentState.copy(apiBaseURL = newApiBaseUrl)

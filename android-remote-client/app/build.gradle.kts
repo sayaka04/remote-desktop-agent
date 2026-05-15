@@ -52,7 +52,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     // Compose BOM (Bill of Materials) ensures all versions match
-    val composeBom = platform("androidx.compose:compose-bom:2024.04.01")
+    val composeBom = platform("androidx.compose:compose-bom:2025.01.00")
     implementation(composeBom)
 
     // Core Compose libraries
@@ -68,4 +68,16 @@ dependencies {
 
     // Datastore Preference for local data storage
     implementation("androidx.datastore:datastore-preferences:1.2.1")
+
+    implementation("androidx.navigation:navigation-compose:2.9.8")
+
+    implementation("androidx.compose.runtime:runtime-saveable")
+
+
+
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
+
+    
 }

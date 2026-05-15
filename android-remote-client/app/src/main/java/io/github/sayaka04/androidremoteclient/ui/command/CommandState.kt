@@ -3,7 +3,12 @@ package io.github.sayaka04.androidremoteclient.ui.command
 data class CommandState(
 
     val textFieldInput: String = "",
-    val actions: MutableList<Action> = mutableListOf()
+    val actions: MutableList<Action> = mutableListOf(),
+
+    // New fields to hold the API response
+    val hostMessage: String = "",
+    val isHostTaskSuccessful: Boolean = false,
+    val isNetworkLoading: Boolean = false
 )
 
 enum class ClickType {

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import io.github.sayaka04.androidremoteclient.api.ApiClient
+import io.github.sayaka04.androidremoteclient.ui.client.ClientViewModel
 import kotlinx.coroutines.flow.first
 
 private val Context.dataStore by preferencesDataStore(name = "local")
@@ -63,6 +65,24 @@ object PreferenceDatastoreUtil {
                 append("${key.name} = $value\n")
             }
         }
+    }
+
+
+    suspend fun setClientDetails(
+        context: Context,
+        clientViewModel: ClientViewModel
+    ) {
+
+        val apiBaseUrl = getString(context, "apiBaseURL")
+        val apiDeviceId = getString(context, "apiDeviceId")
+        val apiCommandId = getString(context, "apiCommandId")
+
+        clientViewModel.updateApiBaseUrl(apiBaseUrl ?: "")
+        clientViewModel.updateApiDeviceId(apiDeviceId ?: "")
+        clientViewModel.updateApiCommandId(apiCommandId ?: "")
+
+        ApiClient.setApiBaseUrl(apiBaseUrl.toString())
+
     }
 
 

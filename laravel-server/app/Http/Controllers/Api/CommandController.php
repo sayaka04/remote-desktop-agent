@@ -63,10 +63,9 @@ class CommandController extends Controller
 
             // Validates that the "type" exactly matches one of your Enum cases
             'client_payload.actions.*.type' => ['required', 'string', Rule::enum(ActionType::class)],
-
             // Conditional validation based on action type
-            'client_payload.actions.*.x' => 'integer|nullable',
-            'client_payload.actions.*.y' => 'integer|nullable',
+            'client_payload.actions.*.x' => 'nullable|decimal:0,10',
+            'client_payload.actions.*.y' => 'nullable|decimal:0,10',
             'client_payload.actions.*.button' => 'string|in:left,right,middle|nullable',
             'client_payload.actions.*.amount' => 'integer|nullable',
             'client_payload.actions.*.text' => 'string|nullable',
