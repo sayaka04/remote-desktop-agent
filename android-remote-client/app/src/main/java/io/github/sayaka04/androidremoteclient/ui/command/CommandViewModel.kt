@@ -13,111 +13,109 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+class CommandViewModel : ViewModel() {
+    private val _state = MutableStateFlow(CommandState())
+    val state: StateFlow<CommandState> = _state.asStateFlow()
 
-class CommandViewModel: ViewModel(){
-    private val _state = MutableStateFlow(CommandState())   // --- Private (Mutable)
-    val state: StateFlow<CommandState> = _state.asStateFlow()     // --- Public (ReadOnly)
+    fun updateTextField(newTextFieldInput: String) {
+        _state.update { it.copy(textFieldInput = newTextFieldInput) }
+    }
 
-    fun updateTextField(newTextFieldInput: String){
+    fun insertIntoActionTypeText(text: String) {
+        if (text.isBlank()) return
+        _state.update { it.copy(
+            actions = it.actions + Action.Text(text),
+            textFieldInput = ""
+        )}
+    }
+
+    fun insertIntoActionClick(type: ClickType) {
+        _state.update { it.copy(actions = it.actions + Action.Click(type)) }
+    }
+
+    fun insertIntoActionMove(x: Float, y: Float) {
+        _state.update { it.copy(actions = it.actions + Action.Move(x, y)) }
+    }
+
+    fun removeActionAt(index: Int) {
         _state.update { currentState ->
-            currentState.copy(textFieldInput = newTextFieldInput)
+            val newList = currentState.actions.toMutableList()
+            if (index in newList.indices) newList.removeAt(index)
+            currentState.copy(actions = newList)
         }
     }
 
-    fun insertIntoActionTypeText(newActionTypeText: String){
-        _state.value.actions.add(Action.Text(newActionTypeText))
-    }
-
-    fun insertIntoActionClick(clickType: ClickType) {
-        _state.value.actions.add(
-            Action.Click(clickType)
-        )
-    }
-
-    fun insertIntoActionMove(perX: Float, perY: Float){
-        _state.value.actions.add(Action.Move(perX, perY))
-    }
-
-    fun getCommandActionLists(): String {
-        var text: String = ""
-        state.value.actions.forEach { action ->
-            when (action) {
-                is Action.Click -> {
-                    text += "Click: ${action.button}\n"
-                }
-
-                is Action.Move -> {
-                    text += "Move: x=${action.x}, y=${action.y}\n"
-                }
-
-                is Action.Text -> {
-                    text += "Text: ${action.value}\n"
-                }
+    fun moveAction(fromIndex: Int, toIndex: Int) {
+        _state.update { currentState ->
+            val newList = currentState.actions.toMutableList()
+            if (fromIndex in newList.indices && toIndex in newList.indices) {
+                val item = newList.removeAt(fromIndex)
+                newList.add(toIndex, item)
             }
+            currentState.copy(actions = newList)
         }
-        return text
     }
 
-
-    // --- NETWORK FUNCTIONS ---
+    fun clearActions() {
+        _state.update { it.copy(actions = emptyList()) }
+    }
+// --- NETWORK OPERATIONS ---
 
     fun sendCommandsToServer(deviceId: String) {
+        val currentActions = state.value.actions
+        if (currentActions.isEmpty()) {
+            Log.w("API_DEBUG", "Abort: No actions in queue to send.")
+            return
+        }
+
         viewModelScope.launch {
             _state.update { it.copy(isNetworkLoading = true) }
             try {
-                // Map UI Actions to Network Actions
-                val networkActions = state.value.actions.map { action ->
+                Log.d("API_DEBUG", "Starting Send Process for Device: $deviceId")
+
+                val networkActions = currentActions.map { action ->
                     when (action) {
-                        is Action.Click -> NetworkAction(
-                            type = "click",
-                            button = action.button.name.lowercase()
-                        )
-                        is Action.Move -> NetworkAction(
-                            type = "move_mouse",
-                            x = action.x,
-                            y = action.y
-                        )
-                        is Action.Text -> NetworkAction(
-                            type = "type_text",
-                            text = action.value
-                        )
+                        is Action.Click -> NetworkAction(type = "click", button = action.button.name.lowercase())
+                        is Action.Move -> NetworkAction(type = "move_mouse", x = action.x, y = action.y)
+                        is Action.Text -> NetworkAction(type = "type_text", text = action.value)
                     }
                 }
 
                 val payload = CommandRequest(ClientPayload(networkActions))
+                Log.d("API_DEBUG", "Payload Prepared: ${networkActions.size} actions mapped.")
+
+                Log.d("API_DEBUG", "Attempting connection to server...")
                 val response = ApiClient.service.sendCommandRequest(deviceId, payload)
 
                 if (response.isSuccessful) {
-                    Log.d("API", "Commands sent successfully!")
-                    // Clear actions after sending if desired:
-                    // _state.value.actions.clear()
+                    Log.d("API_DEBUG", "HTTP 200: Commands sent and received successfully!")
+                    clearActions() // Auto-clear on success
                 } else {
-                    Log.e("API", "Send error: ${response.errorBody()?.string()}")
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("API_DEBUG", "HTTP Error Code: ${response.code()}")
+                    Log.e("API_DEBUG", "Server Error Response: $errorBody")
                 }
             } catch (e: Exception) {
-                Log.e("API", "Network exception: ${e.message}")
+                Log.e("API_DEBUG", "CRITICAL NETWORK FAILURE")
+                Log.e("API_DEBUG", "Exception Message: ${e.message}")
+                e.printStackTrace()
             } finally {
                 _state.update { it.copy(isNetworkLoading = false) }
+                Log.d("API_DEBUG", "Send Process Finished.")
             }
         }
     }
-
-
 
     fun requestDataFromHost(deviceId: String) {
         viewModelScope.launch {
             _state.update { it.copy(isNetworkLoading = true) }
             try {
-                Log.d("API_CHECK", "Fetching data for device: $deviceId")
+                Log.d("API_DEBUG", "Fetching Host Status for: $deviceId")
                 val response = ApiClient.service.requestHostData(deviceId)
 
                 if (response.isSuccessful && response.body()?.data != null) {
                     val hostData = response.body()!!.data!!
-
-                    // --- LOGS TO CONFIRM ---
-                    Log.d("API_CHECK", "Success! Response received.")
-                    Log.d("API_CHECK", "Has Host Response: ${hostData.hasHostResponse}")
-                    Log.d("API_CHECK", "Last Updated: ${hostData.lastUpdatedAt}")
+                    Log.d("API_DEBUG", "Host Data Received: Success=${hostData.hasHostResponse}")
 
                     _state.update {
                         it.copy(
@@ -126,15 +124,14 @@ class CommandViewModel: ViewModel(){
                         )
                     }
                 } else {
-                    val errorMsg = response.errorBody()?.string()
-                    Log.e("API_CHECK", "Server Error: $errorMsg")
+                    Log.e("API_DEBUG", "Host Fetch Error: HTTP ${response.code()}")
+                    Log.e("API_DEBUG", "Error Body: ${response.errorBody()?.string()}")
                 }
             } catch (e: Exception) {
-                Log.e("API_CHECK", "Network Exception: ${e.message}")
+                Log.e("API_DEBUG", "Host Fetch Exception: ${e.message}")
             } finally {
                 _state.update { it.copy(isNetworkLoading = false) }
             }
         }
     }
-
 }
