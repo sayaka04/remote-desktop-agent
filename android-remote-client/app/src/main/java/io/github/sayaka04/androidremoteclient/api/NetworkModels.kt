@@ -2,7 +2,34 @@ package io.github.sayaka04.androidremoteclient.api
 
 import com.google.gson.annotations.SerializedName
 
-// Models for sending the Request
+// ==========================================
+// NEW MODELS (Auth & Navigation)
+// ==========================================
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+data class LoginResponse(
+    val token: String
+)
+
+data class Device(
+    val id: String?,       // Made nullable to prevent parsing crashes
+    val name: String?,     // Made nullable to prevent parsing crashes
+    @SerializedName("is_online") val isOnline: Boolean = false
+)
+
+data class DeviceCommand(
+    val id: String?,       // Made nullable
+    val name: String?,     // Made nullable
+    val description: String? = null
+)
+
+
+// ==========================================
+// YOUR ORIGINAL MODELS (Untouched)
+// ==========================================
 data class CommandRequest(
     @SerializedName("client_payload") val clientPayload: ClientPayload
 )
@@ -19,15 +46,10 @@ data class NetworkAction(
     @SerializedName("text") val text: String? = null
 )
 
-
-
-
-
 data class HostResponseWrapper(
     @SerializedName("data") val data: HostData?
 )
 
-// The inner content of the "data" object
 data class HostData(
     @SerializedName("command_id") val commandId: Int?,
     @SerializedName("has_client_request") val hasClientRequest: Boolean?,

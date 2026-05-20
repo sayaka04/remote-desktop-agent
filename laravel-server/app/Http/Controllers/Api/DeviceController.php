@@ -14,7 +14,8 @@ class DeviceController extends Controller
      */
     public function index()
     {
-        //
+        $devices = Device::where('user_id', auth()->id())->get();
+        return response()->json($devices);
     }
 
     /**
@@ -81,5 +82,21 @@ class DeviceController extends Controller
     public function destroy(Device $device)
     {
         //
+    }
+
+
+    /**
+     * Get the list of available commands for a specific device.
+     */
+    public function commands(Device $device)
+    {
+        // This ensures a user can only see commands for their own device
+        if ($device->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Return the commands belonging to this device
+        // This matches the DeviceCommand model in your Android code (id, name, description)
+        return response()->json($device->commands);
     }
 }

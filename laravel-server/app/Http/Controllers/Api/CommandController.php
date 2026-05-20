@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ClientRequestResource;
 use App\Http\Resources\HostResponseResource;
 use App\Models\Command;
+use App\Models\Device;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class CommandController extends Controller
@@ -17,7 +19,9 @@ class CommandController extends Controller
      */
     public function index()
     {
-        //
+        $devices = Device::where("user_id", Auth::id())->get();
+        $commands = Command::whereIn('device_id', $devices->pluck('id'))->get();
+        return response()->json($commands);
     }
 
     /**
