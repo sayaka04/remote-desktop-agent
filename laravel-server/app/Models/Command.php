@@ -12,11 +12,15 @@ class Command extends Model
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
      */
     protected $fillable = [
         'device_id',
+        'uuid',
+        'name',
+        'is_public',
+        'permissions',
+        'expires_at',
+        'access_token',
         'has_client_request',
         'client_payload',
         'has_host_response',
@@ -26,15 +30,25 @@ class Command extends Model
 
     /**
      * The attributes that should be cast.
-     *
-     * @var array<string, string>
      */
     protected $casts = [
+        'is_public'          => 'boolean', 
+        'permissions'        => 'string', 
+        'expires_at'         => 'datetime',
         'has_client_request' => 'boolean',
         'has_host_response'  => 'boolean',
-        'client_payload'     => 'array', // Automatically casts JSON to PHP array
-        'host_payload'       => 'array', // Automatically casts JSON to PHP array
+        'client_payload'     => 'array',
+        'host_payload'       => 'array',
     ];
+
+    /**
+     * Use the UUID for routing instead of the ID.
+     * This makes URLs look like: /commands/018f3a...
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     /**
      * Get the device that this command belongs to.
@@ -42,5 +56,16 @@ class Command extends Model
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
+    }
+
+    /**
+     * Helper to check if the session is still valid.
+     */
+    public function isValid(): bool
+    {
+        if (!$this->is_public) return false;
+        if ($this->expires_at && $this->expires_at->isPast()) return false;
+
+        return true;
     }
 }

@@ -43,7 +43,7 @@ class DeviceController extends Controller
         $device = Device::create([
             'user_id' => $validated['user_id'],
             'name'    => $validated['name'],
-            'uuid'    => Str::uuid(), // Generates a unique string like "550e8400-e29b-41d4-a716-446655440000"
+            'uuid'    => Str::uuid7(), // Generates a unique string like "550e8400-e29b-41d4-a716-446655440000"
         ]);
 
         return response()->json([

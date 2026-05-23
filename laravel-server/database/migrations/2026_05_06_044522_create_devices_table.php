@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('devices', function (Blueprint $table) {
-            $table->id(); // Internal database ID
-            $table->uuid('uuid')->unique(); // The pairing key / kill switch
+            $table->id();
+            $table->uuid('uuid')->unique();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
 
             $table->string('name');
