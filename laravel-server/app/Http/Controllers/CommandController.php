@@ -55,14 +55,13 @@ class CommandController extends Controller
      */
     public function controller(Command $command)
     {
-        // Security check
         if ($command->device->user_id !== Auth::id()) {
             abort(403);
         }
 
         $command->load('device');
 
-        // FIX: Match your existing lowercase folder and file structure perfectly
+        // Passing the raw Eloquent model directly (NO Resource wrapper)
         return inertia('commands/controller', [
             'command' => $command
         ]);
@@ -77,13 +76,18 @@ class CommandController extends Controller
             abort(403);
         }
 
+        // FIX: Expanded validation rules to allow the new action types (scroll, hotkey, etc.)
         $validated = $request->validate([
             'payload' => 'required|array',
-            'payload.*.type' => 'required|in:move_mouse,click,type_text',
+            'payload.*.type' => 'required|string|in:move_mouse,click,type_text,key_press,key_down,key_up,hotkey,scroll',
             'payload.*.x' => 'nullable|numeric',
             'payload.*.y' => 'nullable|numeric',
             'payload.*.button' => 'nullable|in:left,middle,right',
             'payload.*.text' => 'nullable|string',
+            'payload.*.key' => 'nullable|string',
+            'payload.*.modifiers' => 'nullable|array',
+            'payload.*.axis' => 'nullable|in:vertical,horizontal',
+            'payload.*.amount' => 'nullable|numeric',
         ]);
 
         $command->update([
