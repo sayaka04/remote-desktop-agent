@@ -19,12 +19,14 @@ public class ApiController {
 
     public JsonObject requestData() {
         try {
+            System.out.println("Hayyayyayayays"+Config.get("api.device_id"));
+
             String response = ApiClient.get("/commands/" + Config.get("api.device_id"));
             JsonObject json = Json.parseObject(response);
             windowController.writeToLog(LogUtil.LogType.INFO, "Request Data: " + response);
 
             // --- TODO: Add debug mode
-//            System.out.println(response);
+//            System.out.println(Config.get("api.device_id"));
 //            System.out.println(Json.toJson(json));
 
             return Json.getObject(json, "data");

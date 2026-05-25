@@ -7,12 +7,10 @@ use App\Models\Device;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class CommandController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $commands = Command::with("device")->whereHas("device", function ($query) {
@@ -24,9 +22,6 @@ class CommandController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $devices = Device::where('user_id', Auth::id())->get();
@@ -35,9 +30,6 @@ class CommandController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -59,8 +51,50 @@ class CommandController extends Controller
     }
 
     /**
-     * Rotate the public access token.
+     * Display the private Web Controller for the device owner.
      */
+    public function controller(Command $command)
+    {
+        // Security check
+        if ($command->device->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $command->load('device');
+
+        // FIX: Match your existing lowercase folder and file structure perfectly
+        return inertia('commands/controller', [
+            'command' => $command
+        ]);
+    }
+
+    /**
+     * Store the action payload securely from the private web controller.
+     */
+    public function storePayload(Request $request, Command $command)
+    {
+        if ($command->device->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'payload' => 'required|array',
+            'payload.*.type' => 'required|in:move_mouse,click,type_text',
+            'payload.*.x' => 'nullable|numeric',
+            'payload.*.y' => 'nullable|numeric',
+            'payload.*.button' => 'nullable|in:left,middle,right',
+            'payload.*.text' => 'nullable|string',
+        ]);
+
+        $command->update([
+            'client_payload'     => ['actions' => $validated['payload']],
+            'has_client_request' => true,
+            'has_host_response'  => false,
+        ]);
+
+        return back();
+    }
+
     public function rotateToken(Command $command)
     {
         if ($command->device->user_id !== Auth::id()) {
@@ -74,9 +108,6 @@ class CommandController extends Controller
         return back()->with('success', 'The access token has been regenerated.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Command $command)
     {
         if ($command->device->user_id !== Auth::id()) {
@@ -91,9 +122,6 @@ class CommandController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Command $command)
     {
         if ($command->device->user_id !== Auth::id()) {
@@ -113,9 +141,6 @@ class CommandController extends Controller
         return redirect()->back()->with('success', 'Command updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Command $command)
     {
         $command->delete();

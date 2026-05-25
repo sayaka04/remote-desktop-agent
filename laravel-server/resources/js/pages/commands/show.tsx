@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import Heading from '@/components/heading';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Copy, RefreshCw, ExternalLink, Check } from 'lucide-react';
+import { Copy, RefreshCw, ExternalLink, Check, MonitorPlay } from 'lucide-react';
 
 type Device = {
     id: number;
@@ -37,7 +37,9 @@ type Props = {
 const formatForInput = (dateString: string | null) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
 };
 
 export default function Show({ command, devices = [] }: Props) {
@@ -58,8 +60,6 @@ export default function Show({ command, devices = [] }: Props) {
     ];
 
     const isExpired = command.expires_at ? new Date(command.expires_at) < new Date() : false;
-    
-    
     const publicUrl = `${window.location.origin}/s/${command.access_token}`;
 
     const submitUpdate = (e: React.FormEvent) => {
@@ -93,17 +93,30 @@ export default function Show({ command, devices = [] }: Props) {
 
             <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div>
-                    <Heading title={command.name} description="Configure access rules and security for this remote session." />
+                    <Heading 
+                        title={command.name} 
+                        description="Configure access rules and security for this remote session." 
+                    />
                     <div className="mt-2 flex items-center gap-2">
                         <Badge variant={command.is_public ? (isExpired ? "destructive" : "default") : "secondary"}>
                             {isExpired ? 'Expired' : (command.is_public ? 'Public Access Live' : 'Private / Disabled')}
                         </Badge>
-                        <Badge variant="outline" className="capitalize border-primary/30">{command.permissions} Access</Badge>
+                        <Badge variant="outline" className="capitalize border-primary/30">
+                            {command.permissions} Access
+                        </Badge>
                         <span className="text-xs text-muted-foreground font-mono ml-2">ID: {command.uuid}</span>
                     </div>
                 </div>
+                
+                {/* --- THIS IS THE OPEN CONTROLLER BUTTON --- */}
+                <Button asChild className="gap-2">
+                    <Link href={`/commands/${command.uuid}/controller`}>
+                        <MonitorPlay className="h-4 w-4" />
+                        Launch Web Controller
+                    </Link>
+                </Button>
             </div>
 
             {flash?.success && (
@@ -209,7 +222,6 @@ export default function Show({ command, devices = [] }: Props) {
 
                 {/* Sidebar: Public Link & Status */}
                 <div className="space-y-6">
-                    {/* The Secret Link Card */}
                     <Card className={command.is_public ? "border-primary/50 shadow-sm" : "opacity-60"}>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Shareable Link</CardTitle>
