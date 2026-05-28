@@ -14,27 +14,39 @@ Route::inertia('/', 'welcome', [
 // ==========================================
 // PUBLIC ROUTES (No Login Required)
 // ==========================================
-Route::get('/client', [ClientController::class, 'index'])->name('client.index');
-Route::post('/client/authenticate', [ClientController::class, 'authenticate'])->name('client.authenticate');
-Route::post('/client/logout', [ClientController::class, 'logout'])->name('client.logout');
-Route::post('/client/commands/{command:uuid}/payload', [ClientController::class, 'storePayload'])->name('client.payload');
+// Allow normal browsing (60 requests per minute)
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/client', [ClientController::class, 'index'])->name('client.index');
+    Route::post('/client/logout', [ClientController::class, 'logout'])->name('client.logout');
+});
 
+// STRICT Rate Limiting for Authentication (Prevent Brute-Force Password/Token guessing)
+// Only allow 5 attempts per minute per IP.
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/client/authenticate', [ClientController::class, 'authenticate'])->name('client.authenticate');
+});
+
+// HIGHER Rate Limiting for Payload Submission (Since Axios sends requests instantly)
+// Allows 120 actions per minute
+Route::middleware('throttle:120,1')->group(function () {
+    Route::post('/client/commands/{command:uuid}/payload', [ClientController::class, 'storePayload'])->name('client.payload');
+});
 
 // ==========================================
 // PRIVATE ROUTES (Requires User Login)
 // ==========================================
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'throttle:100,1'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
-    Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
-    Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
+    // Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+    // Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
 
-    // The Private Web Controller View
     Route::get('/commands/{command:uuid}/controller', [CommandController::class, 'controller'])
         ->name('commands.controller');
 
-    // The Private Payload Submission
+    // High limit for private payload execution
     Route::post('/commands/{command:uuid}/payload', [CommandController::class, 'storePayload'])
+        ->middleware('throttle:200,1')
         ->name('commands.payload');
 
     Route::resource('devices', DeviceController::class);
