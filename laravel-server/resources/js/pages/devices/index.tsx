@@ -1,9 +1,10 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Heading from '@/components/heading';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import FlashMessages from '@/components/my-components/flash-messages';
 
 type Device = {
     uuid: string;
@@ -22,42 +23,25 @@ const breadcrumbs = [
     { title: 'Devices', href: '/devices' },
 ];
 
-Index.layout = {
-    breadcrumbs: [
-        {
-            title: 'Devices',
-            href: '/devices',
-        },
-    ],
-};
-
 export default function Index({ devices }: Props) {
-    // flash messages
-    const { flash } = usePage().props as any;
-    
     return (
-        <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">
+        <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
             <Head title="Devices" />
             
             <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-            {/* Flash Message Display */}
-            {flash?.success && (
-                <div className="rounded bg-green-100 p-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    {flash.success}
-                </div>
-            )}
+            <FlashMessages />
 
             <div className="flex items-center justify-between">
-                <Heading title="Devices" description="Manage your connected devices" />
+                <Heading title="Devices" description="Manage your remote devices." />
                 <Button asChild>
-                    <Link href="/devices/create">+ Create Device</Link>
+                    <Link href="/devices/create">+ Add Device</Link>
                 </Button>
             </div>
 
             {devices.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-                    <p className="text-muted-foreground">No devices found.</p>
+                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-8">
+                    <p className="text-sm text-muted-foreground">No devices found.</p>
                 </div>
             ) : (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -69,9 +53,9 @@ export default function Index({ devices }: Props) {
                                     Active
                                 </Badge>
                             </CardHeader>
-                            <CardContent className="flex-1 space-y-1 text-sm text-muted-foreground">
-                                <p>Last seen: {device.last_seen_at || 'Never'}</p>
-                                <p>Added: {new Date(device.created_at).toLocaleDateString()}</p>
+                            <CardContent className="flex-1 space-y-1 text-sm text-muted-foreground mt-2">
+                                <p><span className="font-medium text-foreground">Last seen:</span> {device.last_seen_at || 'Never'}</p>
+                                <p><span className="font-medium text-foreground">Added:</span> {new Date(device.created_at).toLocaleDateString()}</p>
                             </CardContent>
                             <CardFooter>
                                 <Button variant="outline" asChild className="w-full">

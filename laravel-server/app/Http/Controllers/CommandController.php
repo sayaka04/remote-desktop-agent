@@ -7,12 +7,10 @@ use App\Models\Device;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class CommandController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $commands = Command::with("device")->whereHas("device", function ($query) {
@@ -24,9 +22,20 @@ class CommandController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+    public function status(Command $command)
+    {
+        // Security: Ensure the logged-in user actually owns this device
+        if ($command->device->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Return only the bare minimum JSON for maximum speed
+        return response()->json([
+            'screenshot_path' => $command->screenshot_path,
+            'updated_at' => $command->updated_at,
+        ]);
+    }
+
     public function create()
     {
         $devices = Device::where('user_id', Auth::id())->get();
@@ -35,9 +44,6 @@ class CommandController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -58,25 +64,66 @@ class CommandController extends Controller
         return back()->with('success', 'Command created successfully.');
     }
 
+    public function controller(Command $command)
+    {
+        if ($command->device->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $command->load('device');
+
+        return inertia('commands/controller', [
+            'command' => $command
+        ]);
+    }
+
     /**
-     * Rotate the public access token.
+     * Store Payload (Optimized for speed)
      */
+    public function storePayload(Request $request, Command $command)
+    {
+        if ($command->device->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // We MUST declare every single possible key here, otherwise Laravel deletes them!
+        $validated = $request->validate([
+            'payload' => 'required|array',
+            'payload.*.type' => 'required|string',
+            'payload.*.x' => 'nullable|numeric',
+            'payload.*.y' => 'nullable|numeric',
+            'payload.*.button' => 'nullable|string',
+            'payload.*.text' => 'nullable|string',
+            'payload.*.key' => 'nullable|string',
+            'payload.*.modifiers' => 'nullable|array',
+            'payload.*.axis' => 'nullable|string',
+            'payload.*.amount' => 'nullable|numeric',
+        ]);
+
+        $command->update([
+            'client_payload'     => ['actions' => $validated['payload']],
+            'has_client_request' => true,
+            'has_host_response'  => false,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Command sequence executed.'
+        ]);
+    }
+
     public function rotateToken(Command $command)
     {
         if ($command->device->user_id !== Auth::id()) {
             abort(403);
         }
 
-        $command->update([
-            'access_token' => Str::random(64)
-        ]);
+        $command->update(['access_token' => Str::random(64)]);
 
         return back()->with('success', 'The access token has been regenerated.');
     }
 
-    /**
-     * Display the specified resource.
-     */
+
     public function show(Command $command)
     {
         if ($command->device->user_id !== Auth::id()) {
@@ -91,9 +138,6 @@ class CommandController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Command $command)
     {
         if ($command->device->user_id !== Auth::id()) {
@@ -113,11 +157,12 @@ class CommandController extends Controller
         return redirect()->back()->with('success', 'Command updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Command $command)
     {
+        if ($command->device->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         $command->delete();
         return redirect()->route('commands.index')->with('success', 'Command deleted successfully.');
     }

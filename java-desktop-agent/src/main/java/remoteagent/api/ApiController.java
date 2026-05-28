@@ -24,7 +24,7 @@ public class ApiController {
             windowController.writeToLog(LogUtil.LogType.INFO, "Request Data: " + response);
 
             // --- TODO: Add debug mode
-//            System.out.println(response);
+//            System.out.println(Config.get("api.device_id"));
 //            System.out.println(Json.toJson(json));
 
             return Json.getObject(json, "data");
