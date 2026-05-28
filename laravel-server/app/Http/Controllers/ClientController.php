@@ -10,7 +10,6 @@ class ClientController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Read securely from the encrypted session cookie
         $uuid = $request->session()->get('client_uuid');
         $token = $request->session()->get('client_token');
         $activeCommand = null;
@@ -22,7 +21,6 @@ class ClientController extends Controller
                 ->where('is_public', true)
                 ->first();
 
-            // If the session data is invalid or expired, clear it out securely
             if (!$activeCommand) {
                 $request->session()->forget(['client_uuid', 'client_token']);
             }
@@ -33,9 +31,6 @@ class ClientController extends Controller
         ]);
     }
 
-    /**
-     * Authenticate via POST request (Hidden from URL)
-     */
     public function authenticate(Request $request)
     {
         $request->validate([
@@ -49,18 +44,14 @@ class ClientController extends Controller
             ->first();
 
         if ($command) {
-            // Save securely to the server-side session
-            $request->session()->put('client_uuid', $request->uuid);
-            $request->session()->put('client_token', $request->token);
-            return back();
+            $request->session()->put('client_uuid', $command->uuid);
+            $request->session()->put('client_token', $command->access_token);
+            return back()->with('success', 'Authenticated successfully.');
         }
 
-        return back()->withErrors(['auth' => 'Invalid or expired credentials.']);
+        return back()->withErrors(['auth' => 'Invalid session credentials.']);
     }
 
-    /**
-     * Clear the session via POST
-     */
     public function logout(Request $request)
     {
         $request->session()->forget(['client_uuid', 'client_token']);
@@ -68,26 +59,24 @@ class ClientController extends Controller
     }
 
     /**
-     * Store the payload (Notice we no longer need the token from the frontend!)
+     * Store the payload (Optimized for speed)
      */
     public function storePayload(Request $request, Command $command)
     {
-        // Verify identity using the secure session token instead of the request body
         if ($command->access_token !== $request->session()->get('client_token')) {
             abort(403, 'Unauthorized access.');
         }
 
-        // FIX: Expanded validation rules to allow the new action types (scroll, hotkey, etc.)
         $validated = $request->validate([
             'payload' => 'required|array',
-            'payload.*.type' => 'required|string|in:move_mouse,click,type_text,key_press,key_down,key_up,hotkey,scroll',
+            'payload.*.type' => 'required|string',
             'payload.*.x' => 'nullable|numeric',
             'payload.*.y' => 'nullable|numeric',
-            'payload.*.button' => 'nullable|in:left,middle,right',
+            'payload.*.button' => 'nullable|string',
             'payload.*.text' => 'nullable|string',
             'payload.*.key' => 'nullable|string',
             'payload.*.modifiers' => 'nullable|array',
-            'payload.*.axis' => 'nullable|in:vertical,horizontal',
+            'payload.*.axis' => 'nullable|string',
             'payload.*.amount' => 'nullable|numeric',
         ]);
 
@@ -97,6 +86,11 @@ class ClientController extends Controller
             'has_host_response'  => false,
         ]);
 
-        return back();
+        // SPEED IMPROVEMENT: Return JSON instead of back()
+        // This stops the browser from reloading the entire Inertia state.
+        return response()->json([
+            'success' => true,
+            'message' => 'Command sequence transmitted.'
+        ]);
     }
 }

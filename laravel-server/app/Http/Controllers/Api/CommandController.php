@@ -10,6 +10,7 @@ use App\Models\Command;
 use App\Models\Device;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class CommandController extends Controller
@@ -98,9 +99,24 @@ class CommandController extends Controller
             'screenshot'             => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
-        $screenshotPath = null;
+        $screenshotPath = $command->screenshot_path;
+
         if ($request->hasFile('screenshot')) {
-            $screenshotPath = $request->file('screenshot')->store('screenshots', 'public');
+            // A. DELETE OLD FILE to prevent server bloat
+            if ($screenshotPath && Storage::disk('public')->exists($screenshotPath)) {
+                Storage::disk('public')->delete($screenshotPath);
+            }
+
+            // B. ORGANIZE BY DIRECTORY: screenshots/{user_id}/{device_id}
+            $command->loadMissing('device');
+            $userId = $command->device->user_id ?? Auth::id(); // Fallback if device relation fails
+            $deviceId = $command->device_id;
+            $directory = "screenshots/{$userId}/{$deviceId}";
+
+            // C. RENAME FILE SAFELY WITH DATE
+            $filename = now()->format('Ymd_His') . '_' . uniqid() . '.jpg';
+
+            $screenshotPath = $request->file('screenshot')->storeAs($directory, $filename, 'public');
         }
 
         // 2. Update the command with results and flip the flag

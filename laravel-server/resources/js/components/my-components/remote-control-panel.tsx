@@ -1,12 +1,15 @@
+// resources/js/components/my-components/remote-control-panel.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
-import { router } from '@inertiajs/react';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
     MonitorPlay, X, CheckCircle2, XCircle, Maximize2, Minimize2, 
-    TerminalSquare, Type, Send, Keyboard, Mouse, MoveVertical, Command as CmdIcon, Trash2, RefreshCw
+    TerminalSquare, Type, Send, Keyboard, Mouse, MoveVertical, 
+    Command as CmdIcon, Trash2, RefreshCw, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { Action, ActionPayload } from '@/types/remote';
@@ -55,6 +58,19 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
         setHkModifiers(prev => prev.includes(mod) ? prev.filter(m => m !== mod) : [...prev, mod]);
     };
 
+    // RESTORED: Function to move actions up or down in the queue
+    const moveAction = (index: number, direction: 'up' | 'down') => {
+        setActions(prev => {
+            const newActions = [...prev];
+            if (direction === 'up' && index > 0) {
+                [newActions[index - 1], newActions[index]] = [newActions[index], newActions[index - 1]];
+            } else if (direction === 'down' && index < newActions.length - 1) {
+                [newActions[index], newActions[index + 1]] = [newActions[index + 1], newActions[index]];
+            }
+            return newActions;
+        });
+    };
+
     const sendPayload = () => {
         onResetPolling();
         if (actions.length === 0) return;
@@ -62,18 +78,16 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
         
         const cleanPayload = actions.map(({ id, ...rest }) => rest);
         
-        router.post(postEndpoint, { payload: cleanPayload }, {
-            preserveScroll: true,
-            onSuccess: () => {
+        axios.post(postEndpoint, { payload: cleanPayload })
+            .then(() => {
                 setSendStatus('success');
                 setActions([]);
                 setTimeout(() => setSendStatus('idle'), 2000);
-            },
-            onError: () => {
+            })
+            .catch(() => {
                 setSendStatus('error');
                 setTimeout(() => setSendStatus('idle'), 3000);
-            }
-        });
+            });
     };
 
     return (
@@ -149,7 +163,19 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
                                             {a.type === 'key_up' && `Release ${a.key}`}
                                         </span>
                                     </div>
-                                    <button onClick={() => setActions(actions.filter(x => x.id !== a.id))} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5"/></button>
+                                    
+                                    {/* RESTORED: Move Up, Move Down, and Delete buttons */}
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => moveAction(i, 'up')} disabled={i === 0} className="text-muted-foreground hover:text-primary disabled:opacity-30 p-1">
+                                            <ChevronUp className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button onClick={() => moveAction(i, 'down')} disabled={i === actions.length - 1} className="text-muted-foreground hover:text-primary disabled:opacity-30 p-1">
+                                            <ChevronDown className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button onClick={() => setActions(actions.filter(x => x.id !== a.id))} className="text-muted-foreground hover:text-destructive p-1 ml-1 border-l pl-2">
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
                             ))
                         }

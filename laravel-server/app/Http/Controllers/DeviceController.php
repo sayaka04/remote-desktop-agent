@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Device;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class DeviceController extends Controller
@@ -13,7 +14,8 @@ class DeviceController extends Controller
      */
     public function index()
     {
-        $devices = Device::all();
+        $devices = Device::where('user_id', Auth::id())->get();
+
         return inertia('devices/index', [
             'devices' => $devices
         ]);
@@ -38,7 +40,7 @@ class DeviceController extends Controller
 
         $device = new Device();
         $device->name = $request->input('name');
-        $device->user_id = auth()->id();
+        $device->user_id = Auth::id(); // Assigns to current user
         $device->uuid = Str::uuid7();
         $device->save();
 
@@ -62,6 +64,7 @@ class DeviceController extends Controller
     {
         $device = Device::with('commands')
             ->where('uuid', $device)
+            ->where('user_id', Auth::id())
             ->firstOrFail();
 
         return inertia('devices/show', [
@@ -82,7 +85,10 @@ class DeviceController extends Controller
      */
     public function update(Request $request, $device)
     {
-        $device = Device::where('uuid', $device)->firstOrFail();
+        $device = Device::where('uuid', $device)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
         $device->name = $request->input('name');
         $device->save();
 
@@ -94,7 +100,10 @@ class DeviceController extends Controller
      */
     public function destroy($device)
     {
-        $device = Device::where('uuid', $device)->firstOrFail();
+        $device = Device::where('uuid', $device)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
         $device->delete();
 
         return redirect()

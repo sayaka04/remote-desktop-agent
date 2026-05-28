@@ -50,9 +50,6 @@ class CommandController extends Controller
         return back()->with('success', 'Command created successfully.');
     }
 
-    /**
-     * Display the private Web Controller for the device owner.
-     */
     public function controller(Command $command)
     {
         if ($command->device->user_id !== Auth::id()) {
@@ -61,14 +58,13 @@ class CommandController extends Controller
 
         $command->load('device');
 
-        // Passing the raw Eloquent model directly (NO Resource wrapper)
         return inertia('commands/controller', [
             'command' => $command
         ]);
     }
 
     /**
-     * Store the action payload securely from the private web controller.
+     * Store Payload (Optimized for speed)
      */
     public function storePayload(Request $request, Command $command)
     {
@@ -76,17 +72,17 @@ class CommandController extends Controller
             abort(403);
         }
 
-        // FIX: Expanded validation rules to allow the new action types (scroll, hotkey, etc.)
+        // We MUST declare every single possible key here, otherwise Laravel deletes them!
         $validated = $request->validate([
             'payload' => 'required|array',
-            'payload.*.type' => 'required|string|in:move_mouse,click,type_text,key_press,key_down,key_up,hotkey,scroll',
+            'payload.*.type' => 'required|string',
             'payload.*.x' => 'nullable|numeric',
             'payload.*.y' => 'nullable|numeric',
-            'payload.*.button' => 'nullable|in:left,middle,right',
+            'payload.*.button' => 'nullable|string',
             'payload.*.text' => 'nullable|string',
             'payload.*.key' => 'nullable|string',
             'payload.*.modifiers' => 'nullable|array',
-            'payload.*.axis' => 'nullable|in:vertical,horizontal',
+            'payload.*.axis' => 'nullable|string',
             'payload.*.amount' => 'nullable|numeric',
         ]);
 
@@ -96,7 +92,10 @@ class CommandController extends Controller
             'has_host_response'  => false,
         ]);
 
-        return back();
+        return response()->json([
+            'success' => true,
+            'message' => 'Command sequence executed.'
+        ]);
     }
 
     public function rotateToken(Command $command)
@@ -105,12 +104,11 @@ class CommandController extends Controller
             abort(403);
         }
 
-        $command->update([
-            'access_token' => Str::random(64)
-        ]);
+        $command->update(['access_token' => Str::random(64)]);
 
         return back()->with('success', 'The access token has been regenerated.');
     }
+
 
     public function show(Command $command)
     {
@@ -147,6 +145,10 @@ class CommandController extends Controller
 
     public function destroy(Command $command)
     {
+        if ($command->device->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         $command->delete();
         return redirect()->route('commands.index')->with('success', 'Command deleted successfully.');
     }

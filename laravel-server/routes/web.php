@@ -39,7 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('devices', DeviceController::class);
 
-    Route::post('/commands/{command}/rotate', [CommandController::class, 'rotateToken'])->name('commands.rotate');
+    Route::post('/commands/{command}/rotate-token', [CommandController::class, 'rotateToken'])->name('commands.rotate');
     Route::resource('commands', CommandController::class);
 });
 

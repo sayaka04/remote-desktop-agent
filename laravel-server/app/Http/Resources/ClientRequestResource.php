@@ -15,7 +15,6 @@ class ClientRequestResource extends JsonResource
             'name'               => $this->name,
             'screenshot_path'    => $this->screenshot_path,
 
-            // Return the full device object for the web UI, and the UUID for the API
             'device'             => $this->whenLoaded('device'),
             'device_uuid'        => $this->whenLoaded('device', fn() => $this->device->uuid),
 
