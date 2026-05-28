@@ -1,5 +1,3 @@
-// resources/js/components/my-components/remote-control-panel.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
@@ -58,7 +56,7 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
         setHkModifiers(prev => prev.includes(mod) ? prev.filter(m => m !== mod) : [...prev, mod]);
     };
 
-    // RESTORED: Function to move actions up or down in the queue
+    // Function to move actions up or down in the queue
     const moveAction = (index: number, direction: 'up' | 'down') => {
         setActions(prev => {
             const newActions = [...prev];
@@ -164,7 +162,7 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
                                         </span>
                                     </div>
                                     
-                                    {/* RESTORED: Move Up, Move Down, and Delete buttons */}
+                                    {/* Move Up, Move Down, and Delete buttons */}
                                     <div className="flex items-center gap-1">
                                         <button onClick={() => moveAction(i, 'up')} disabled={i === 0} className="text-muted-foreground hover:text-primary disabled:opacity-30 p-1">
                                             <ChevronUp className="h-3.5 w-3.5" />

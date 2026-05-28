@@ -1,5 +1,6 @@
 import { Head, router, Link } from '@inertiajs/react';
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Heading from '@/components/heading';
@@ -8,6 +9,7 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 import RemoteControlPanel from '@/components/my-components/remote-control-panel';
 
 interface Device {
+    uuid: string;
     name: string;
 }
 
@@ -26,46 +28,64 @@ interface Props {
 }
 
 export default function Controller({ command }: Props) {
+    // Hold the live data separately from Inertia's page props
+    const [liveCommand, setLiveCommand] = useState(command);
     const [timestamp, setTimestamp] = useState(Date.now());
     const [pollIntervalMs, setPollIntervalMs] = useState(1000);
     const lastActiveTime = useRef(Date.now());
 
-    // Polling Logic
+    // FAST POLLING LOGIC
     useEffect(() => {
         const timerId = setInterval(() => {
             const inactiveDurationMs = Date.now() - lastActiveTime.current;
             if (inactiveDurationMs >= 60000) {
-                setPollIntervalMs(prev => Math.min(prev + 2000, 10000));
+                setPollIntervalMs(prev => Math.min(prev + 2000, 10000)); // slow down if idle
             } else {
-                setPollIntervalMs(1000); 
+                setPollIntervalMs(1000); // fast polling when active
             }
             
-            setTimestamp(Date.now());
-            router.reload({ only: ['command'] });
+            // Hit the lightweight JSON endpoint instead of reloading the whole page
+            axios.get(`/commands/${command.uuid}/status`)
+                .then(res => {
+                    const data = res.data;
+                    // Only update and trigger a re-render/image download if data actually changed
+                    if (data.updated_at !== liveCommand.updated_at) {
+                        setLiveCommand(prev => ({ ...prev, ...data }));
+                        setTimestamp(Date.now());
+                    }
+                })
+                .catch(err => {
+                    if(err.response?.status === 429) console.warn("Polling rate limited!");
+                });
+
         }, pollIntervalMs);
         
         return () => clearInterval(timerId);
-    }, [pollIntervalMs, command.uuid]);
+    }, [pollIntervalMs, command.uuid, liveCommand.updated_at]);
 
     const resetPollingTimer = () => {
         lastActiveTime.current = Date.now();
-        if (pollIntervalMs > 1000) setPollIntervalMs(1000);
+        setPollIntervalMs(1000);
     };
 
+    // Use liveCommand here, not the initial command prop
     const getImageUrl = () => {
-        if (!command.screenshot_path) return null;
-        const path = command.screenshot_path.startsWith('screenshots/') 
-            ? command.screenshot_path 
-            : `screenshots/${command.screenshot_path}`;
+        if (!liveCommand.screenshot_path) return null;
+        
+        const path = liveCommand.screenshot_path.startsWith('screenshots/') 
+            ? liveCommand.screenshot_path 
+            : `screenshots/${liveCommand.screenshot_path}`;
+            
         return `/storage/${path}?t=${timestamp}`;
     };
 
     return (
-        <div className="flex flex-col h-full flex-1 gap-6 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-            <Head title={`Controller: ${command.name}`} />
-
+        <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] space-y-4 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <Head title={`Control: ${command.device.name}`} />
+            
             <Breadcrumbs breadcrumbs={[
-                { title: 'Commands', href: '/commands' },
+                { title: 'Devices', href: '/devices' },
+                { title: command.device.name, href: `/devices/${command.device.uuid}` },
                 { title: command.name, href: `/commands/${command.uuid}` },
                 { title: 'Remote Control', href: `/commands/${command.uuid}/controller` },
             ]} />

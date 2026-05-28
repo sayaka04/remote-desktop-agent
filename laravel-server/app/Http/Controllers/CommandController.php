@@ -22,6 +22,20 @@ class CommandController extends Controller
         ]);
     }
 
+    public function status(Command $command)
+    {
+        // Security: Ensure the logged-in user actually owns this device
+        if ($command->device->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Return only the bare minimum JSON for maximum speed
+        return response()->json([
+            'screenshot_path' => $command->screenshot_path,
+            'updated_at' => $command->updated_at,
+        ]);
+    }
+
     public function create()
     {
         $devices = Device::where('user_id', Auth::id())->get();

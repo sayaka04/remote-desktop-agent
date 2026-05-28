@@ -15,7 +15,7 @@ Route::inertia('/', 'welcome', [
 // PUBLIC ROUTES (No Login Required)
 // ==========================================
 // Allow normal browsing (60 requests per minute)
-Route::middleware('throttle:60,1')->group(function () {
+Route::middleware('throttle:20,1')->group(function () {
     Route::get('/client', [ClientController::class, 'index'])->name('client.index');
     Route::post('/client/logout', [ClientController::class, 'logout'])->name('client.logout');
 });
@@ -30,6 +30,9 @@ Route::middleware('throttle:5,1')->group(function () {
 // Allows 120 actions per minute
 Route::middleware('throttle:120,1')->group(function () {
     Route::post('/client/commands/{command:uuid}/payload', [ClientController::class, 'storePayload'])->name('client.payload');
+
+    Route::get('/client/commands/{command:uuid}/status', [ClientController::class, 'status'])
+        ->name('client.status');
 });
 
 // ==========================================
@@ -37,6 +40,10 @@ Route::middleware('throttle:120,1')->group(function () {
 // ==========================================
 Route::middleware(['auth', 'verified', 'throttle:100,1'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+
+    Route::get('/commands/{command:uuid}/status', [CommandController::class, 'status'])
+        ->name('commands.status');
+
 
     // Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
     // Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');

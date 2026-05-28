@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,92 +35,116 @@ export default function Index({ activeCommand, errors }: Props) {
         token: '',
     });
 
+    // Polling State
+    const [liveCommand, setLiveCommand] = useState<Command | undefined>(activeCommand);
     const [timestamp, setTimestamp] = useState(Date.now());
     const [pollIntervalMs, setPollIntervalMs] = useState(1000);
     const lastActiveTime = useRef(Date.now());
 
-    // Polling Logic (Only active when connected)
+    // Update liveCommand if Inertia provides a new activeCommand (e.g., successful login)
     useEffect(() => {
-        if (!activeCommand) return;
+        setLiveCommand(activeCommand);
+    }, [activeCommand]);
+
+    // FAST POLLING LOGIC
+    useEffect(() => {
+        if (!liveCommand) return; // Only poll if we have an active session
+
         const timerId = setInterval(() => {
             const inactiveDurationMs = Date.now() - lastActiveTime.current;
             if (inactiveDurationMs >= 60000) {
                 setPollIntervalMs(prev => Math.min(prev + 2000, 10000));
             } else {
-                setPollIntervalMs(1000); 
+                setPollIntervalMs(1000);
             }
-            
-            setTimestamp(Date.now());
-            router.reload({ only: ['activeCommand'] });
+
+            // Hit the lightweight JSON endpoint instead of reloading the whole page
+            axios.get(`/client/commands/${liveCommand.uuid}/status`)
+                .then(res => {
+                    const statusData = res.data;
+                    if (statusData.updated_at !== liveCommand.updated_at) {
+                        setLiveCommand(prev => prev ? { ...prev, ...statusData } : prev);
+                        setTimestamp(Date.now());
+                    }
+                })
+                .catch(err => {
+                     if(err.response?.status === 429) console.warn("Polling rate limited!");
+                });
         }, pollIntervalMs);
+
         return () => clearInterval(timerId);
-    }, [pollIntervalMs, activeCommand]);
+    }, [pollIntervalMs, liveCommand?.uuid, liveCommand?.updated_at]);
 
     const resetPollingTimer = () => {
         lastActiveTime.current = Date.now();
-        if (pollIntervalMs > 1000) setPollIntervalMs(1000);
+        setPollIntervalMs(1000);
+    };
+
+    const submitAuth = (e: React.FormEvent) => {
+        e.preventDefault();
+        postAuth('/client/authenticate');
     };
 
     const getImageUrl = () => {
-        if (!activeCommand?.screenshot_path) return null;
-        const path = activeCommand.screenshot_path.startsWith('screenshots/') 
-            ? activeCommand.screenshot_path 
-            : `screenshots/${activeCommand.screenshot_path}`;
+        if (!liveCommand?.screenshot_path) return null;
+        
+        const path = liveCommand.screenshot_path.startsWith('screenshots/') 
+            ? liveCommand.screenshot_path 
+            : `screenshots/${liveCommand.screenshot_path}`;
+            
         return `/storage/${path}?t=${timestamp}`;
     };
 
     return (
-        <div className="flex flex-col h-full flex-1 gap-6 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
-            <Head title="Client Web Controller" />
+        <div className="flex flex-col h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <Head title="Client Portal" />
             
-            <div className="flex justify-between items-center">
-                <Heading 
-                    title={activeCommand ? `Connected: ${activeCommand.name}` : "Client Access"} 
-                    description={activeCommand ? "Remote control session active" : "Connect to a remote device using your access token"} 
-                />
-                {activeCommand && (
+            <div className="flex justify-between items-center mb-6">
+                <Heading title="Client Portal" description="Access shared remote sessions." />
+                
+                {liveCommand && (
                     <Badge 
                         variant={pollIntervalMs <= 1000 ? "default" : "outline"} 
-                        className="cursor-pointer gap-2 font-mono transition-all" 
+                        className="cursor-pointer gap-2 font-mono" 
                         onClick={resetPollingTimer}
-                        title="Click to force refresh and reset timer"
                     >
                         <RefreshCw className={`h-3 w-3 ${pollIntervalMs <= 1000 ? 'animate-spin' : ''}`} /> 
-                        {pollIntervalMs <= 1000 ? <span>Polling (1.0s)</span> : <span>Idle Polling ({pollIntervalMs / 1000}s)</span>}
+                        {pollIntervalMs <= 1000 ? <span>Polling (1.0s)</span> : <span>Idle ({pollIntervalMs / 1000}s)</span>}
                     </Badge>
                 )}
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
-                    <TabsTrigger value="viewer" className="gap-2"><MonitorPlay className="h-4 w-4" /> Viewer</TabsTrigger>
-                    <TabsTrigger value="settings" className="gap-2"><Settings className="h-4 w-4" /> Connection</TabsTrigger>
+                <TabsList className="grid w-[400px] grid-cols-2 mb-4">
+                    <TabsTrigger value="viewer" disabled={!liveCommand}><MonitorPlay className="h-4 w-4 mr-2" /> Remote Viewer</TabsTrigger>
+                    <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" /> Connection</TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="viewer" className="flex-1 flex flex-col mt-4 min-h-0 data-[state=inactive]:hidden">
-                    {!activeCommand ? (
-                        <Card className="flex-1 flex flex-col items-center justify-center text-center p-8 border-dashed">
-                            <MonitorPlay className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                            <h3 className="text-lg font-semibold">Not Connected</h3>
-                            <p className="text-muted-foreground max-w-sm mt-2 mb-6">You need to configure your connection settings before you can view the remote screen.</p>
-                            <Button onClick={() => setActiveTab('settings')}>Configure Connection</Button>
-                        </Card>
-                    ) : (
-                        <RemoteControlPanel 
-                            postEndpoint={`/client/commands/${activeCommand.uuid}/payload`}
+
+                <TabsContent value="viewer" className="flex-1 mt-0 outline-none h-full flex flex-col min-h-0">
+                    {liveCommand ? (
+                         <RemoteControlPanel 
+                            postEndpoint={`/client/commands/${liveCommand.uuid}/payload`}
                             imageUrl={getImageUrl()}
                             onResetPolling={resetPollingTimer}
-                        />
+                         />
+                    ) : (
+                        <Card className="flex-1 flex items-center justify-center border-dashed bg-muted/20">
+                            <div className="text-center text-muted-foreground space-y-4">
+                                <AlertCircle className="h-12 w-12 mx-auto opacity-50" />
+                                <p>No active session. Please authenticate in the Connection tab.</p>
+                                <Button variant="outline" onClick={() => setActiveTab('settings')}>Go to Connection</Button>
+                            </div>
+                        </Card>
                     )}
                 </TabsContent>
-                
-                <TabsContent value="settings" className="mt-4">
+
+                <TabsContent value="settings" className="mt-0 outline-none">
                     <Card className="max-w-md">
                         <CardHeader>
-                            <CardTitle>Connection Status</CardTitle>
-                            <CardDescription>Enter the credentials provided by the host.</CardDescription>
+                            <CardTitle>Authenticate Session</CardTitle>
+                            <CardDescription>Enter the UUID and token provided by the host.</CardDescription>
                         </CardHeader>
-                        <form onSubmit={(e) => { e.preventDefault(); postAuth('/client/authenticate', { onSuccess: () => setActiveTab('viewer') }); }}>
+                        <form onSubmit={submitAuth}>
                             <CardContent className="space-y-4">
                                 {errors.auth && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{errors.auth}</AlertDescription></Alert>}
                                 <div className="space-y-2">
