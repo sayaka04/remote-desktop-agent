@@ -1,4 +1,4 @@
-import { Head, router, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, router, Link, useForm } from '@inertiajs/react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import Heading from '@/components/heading';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Copy, RefreshCw, ExternalLink, Check, MonitorPlay } from 'lucide-react';
+import DangerZone from '@/components/my-components/danger-zone';
+import FlashMessages from '@/components/my-components/flash-messages';
 
 type Device = {
     id: number;
@@ -43,251 +45,182 @@ const formatForInput = (dateString: string | null) => {
 };
 
 export default function Show({ command, devices = [] }: Props) {
-    const { flash } = usePage().props as any;
-    const [copied, setCopied] = useState(false);
+    const [copiedToken, setCopiedToken] = useState(false);
+    const [copiedLink, setCopiedLink] = useState(false);
 
     const { data, setData, patch, processing, errors } = useForm({
-        name: command.name || '',
-        device_id: command.device_id || '',
-        is_public: command.is_public || false,
-        permissions: command.permissions || 'view',
+        name: command.name,
+        device_id: command.device_id.toString(),
+        is_public: command.is_public,
+        permissions: command.permissions,
         expires_at: formatForInput(command.expires_at),
     });
 
-    const breadcrumbs = [
-        { title: 'Commands', href: '/commands' },
-        { title: command.name || `Command #${command.id}`, href: `/commands/${command.uuid}` },
-    ];
-
-    const isExpired = command.expires_at ? new Date(command.expires_at) < new Date() : false;
-    const publicUrl = `${window.location.origin}/s/${command.access_token}`;
-
-    const submitUpdate = (e: React.FormEvent) => {
+    const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        patch(`/commands/${command.uuid}`, {
-            preserveScroll: true,
-        });
-    };
-
-    const rotateToken = () => {
-        if (!confirm('Warning: This will invalidate the current public link. Anyone currently using it will lose access immediately.')) return;
-        router.post(`/commands/${command.uuid}/rotate`, {}, {
-            preserveScroll: true,
-        });
-    };
-
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(publicUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        patch(`/commands/${command.uuid}`);
     };
 
     const destroy = () => {
-        if (!confirm('Are you sure you want to delete this access link? This action is permanent.')) return;
-        router.delete(`/commands/${command.uuid}`);
+        if (confirm('Are you sure you want to delete this command link? This cannot be undone.')) {
+            router.delete(`/commands/${command.uuid}`);
+        }
     };
 
+    const rotateToken = () => {
+        if (confirm('Are you sure you want to rotate the access token? Anyone using the current token will be disconnected.')) {
+            router.post(`/commands/${command.uuid}/rotate-token`);
+        }
+    };
+
+    const copyToClipboard = (text: string, type: 'token' | 'link') => {
+        navigator.clipboard.writeText(text);
+        if (type === 'token') {
+            setCopiedToken(true);
+            setTimeout(() => setCopiedToken(false), 2000);
+        } else {
+            setCopiedLink(true);
+            setTimeout(() => setCopiedLink(false), 2000);
+        }
+    };
+
+    const isExpired = command.expires_at ? new Date(command.expires_at) < new Date() : false;
+    const clientLink = `${window.location.origin}/client`;
+
     return (
-        <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8 max-w-6xl">
-            <Head title={`Manage ${command.name}`} />
+        <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+            <Head title={`Manage Link: ${command.name}`} />
 
-            <Breadcrumbs breadcrumbs={breadcrumbs} />
+            <Breadcrumbs breadcrumbs={[
+                { title: 'Commands', href: '/commands' },
+                { title: command.name, href: `/commands/${command.uuid}` },
+            ]} />
 
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div>
-                    <Heading 
-                        title={command.name} 
-                        description="Configure access rules and security for this remote session." 
-                    />
-                    <div className="mt-2 flex items-center gap-2">
-                        <Badge variant={command.is_public ? (isExpired ? "destructive" : "default") : "secondary"}>
-                            {isExpired ? 'Expired' : (command.is_public ? 'Public Access Live' : 'Private / Disabled')}
-                        </Badge>
-                        <Badge variant="outline" className="capitalize border-primary/30">
-                            {command.permissions} Access
-                        </Badge>
-                        <span className="text-xs text-muted-foreground font-mono ml-2">ID: {command.uuid}</span>
-                    </div>
+            <FlashMessages />
+
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <Heading title="Manage Session" description="Update settings, revoke access, or rotate credentials." />
+                <div className="flex gap-2">
+                    <Button asChild variant="default" className="gap-2">
+                        <Link href={`/commands/${command.uuid}/controller`}>
+                            <MonitorPlay className="h-4 w-4" /> Open Private Controller
+                        </Link>
+                    </Button>
                 </div>
-                
-                {/* --- THIS IS THE OPEN CONTROLLER BUTTON --- */}
-                <Button asChild className="gap-2">
-                    <Link href={`/commands/${command.uuid}/controller`}>
-                        <MonitorPlay className="h-4 w-4" />
-                        Launch Web Controller
-                    </Link>
-                </Button>
             </div>
 
-            {flash?.success && (
-                <div className="rounded-md bg-green-50 p-3 text-sm text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                    {flash.success}
-                </div>
-            )}
-
-            <div className="grid gap-6 lg:grid-cols-3">
-                {/* Main Configuration */}
-                <div className="lg:col-span-2 space-y-6">
+            <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+                <div className="md:col-span-2 lg:col-span-3 space-y-6">
+                    {/* Credentials Card */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Access Control Settings</CardTitle>
-                            <CardDescription>Define who can use this link and what they are allowed to do.</CardDescription>
+                            <CardTitle>Connection Credentials</CardTitle>
+                            <CardDescription>Share these details with authorized users so they can connect to this device.</CardDescription>
                         </CardHeader>
-                        <form onSubmit={submitUpdate}>
-                            <CardContent className="space-y-5">
-                                <div className="grid gap-4 sm:grid-cols-2">
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Client Access Portal</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input value={clientLink} readOnly className="bg-muted font-mono text-xs" />
+                                    <Button variant="outline" size="icon" onClick={() => copyToClipboard(clientLink, 'link')} title="Copy Link">
+                                        {copiedLink ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                    </Button>
+                                    <Button variant="outline" size="icon" asChild title="Open Client Portal">
+                                        <a href={clientLink} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Session UUID</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input value={command.uuid} readOnly className="bg-muted font-mono text-xs" />
+                                        <Button variant="ghost" size="icon" onClick={() => copyToClipboard(command.uuid, 'link')}>
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Access Token (Password)</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input value={command.access_token} readOnly className="bg-muted font-mono text-xs" type="password" />
+                                        <Button variant="ghost" size="icon" onClick={() => copyToClipboard(command.access_token, 'token')}>
+                                            {copiedToken ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="bg-muted/50 justify-between">
+                            <p className="text-xs text-muted-foreground">If a token is compromised, rotate it immediately.</p>
+                            <Button variant="outline" size="sm" onClick={rotateToken} className="gap-2">
+                                <RefreshCw className="h-3 w-3" /> Rotate Token
+                            </Button>
+                        </CardFooter>
+                    </Card>
+
+                    {/* Settings Form */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Session Settings</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={submit} className="space-y-4">
+                                <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Session Alias</Label>
-                                        <Input
-                                            id="name"
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="e.g., Guest Technician Access"
-                                            required
-                                        />
-                                        {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                                        <Label htmlFor="name">Session Name</Label>
+                                        <Input id="name" value={data.name} onChange={e => setData('name', e.target.value)} required />
+                                        {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
                                     </div>
 
                                     <div className="space-y-2">
                                         <Label htmlFor="device_id">Target Device</Label>
-                                        <select
-                                            id="device_id"
-                                            value={data.device_id}
-                                            onChange={(e) => setData('device_id', parseInt(e.target.value))}
-                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                            required
-                                        >
-                                            {devices.map((device) => (
+                                        <select id="device_id" value={data.device_id} onChange={e => setData('device_id', e.target.value)}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                                            {devices.map(device => (
                                                 <option key={device.id} value={device.id}>{device.name}</option>
                                             ))}
                                         </select>
+                                        {errors.device_id && <p className="text-sm text-red-500">{errors.device_id}</p>}
                                     </div>
                                 </div>
 
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="permissions">Permission Level</Label>
-                                        <select
-                                            id="permissions"
-                                            value={data.permissions}
-                                            onChange={(e) => setData('permissions', e.target.value)}
-                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                        >
-                                            <option value="view">View Only (Monitor)</option>
-                                            <option value="control">Remote Control (Execute)</option>
-                                            <option value="admin">Full Admin (Reconfigure)</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="expires_at">Automatic Expiration</Label>
-                                        <Input
-                                            id="expires_at"
-                                            type="datetime-local"
-                                            value={data.expires_at}
-                                            onChange={(e) => setData('expires_at', e.target.value)}
-                                        />
-                                        <p className="text-[10px] text-muted-foreground italic">Link will stop working after this date.</p>
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="expires_at">Expiration Date (Optional)</Label>
+                                    <Input id="expires_at" type="datetime-local" value={data.expires_at} onChange={e => setData('expires_at', e.target.value)} />
+                                    {errors.expires_at && <p className="text-sm text-red-500">{errors.expires_at}</p>}
                                 </div>
 
-                                <Separator />
-
-                                <div className="flex items-start space-x-3 rounded-md border p-4 bg-muted/30">
-                                    <input
-                                        id="is_public"
-                                        type="checkbox"
-                                        checked={data.is_public}
-                                        onChange={(e) => setData('is_public', e.target.checked)}
-                                        className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                    />
-                                    <div className="space-y-1 leading-none">
-                                        <Label htmlFor="is_public" className="text-sm font-medium leading-none">
-                                            Enable Public Access
-                                        </Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            When enabled, anyone with the secret token can access this device without an account.
-                                        </p>
-                                    </div>
+                                <div className="flex items-center space-x-2 pt-2">
+                                    <input id="is_public" type="checkbox" checked={data.is_public} onChange={e => setData('is_public', e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary" />
+                                    <Label htmlFor="is_public" className="font-normal">Make Public (Allow Client Portal access)</Label>
                                 </div>
-                            </CardContent>
-                            <CardFooter className="bg-muted/20 border-t px-6 py-4">
-                                <Button type="submit" disabled={processing} className="w-full sm:w-auto">
-                                    {processing ? 'Saving Changes...' : 'Save Configuration'}
-                                </Button>
-                            </CardFooter>
-                        </form>
+
+                                <div className="pt-4 flex justify-end">
+                                    <Button type="submit" disabled={processing}>Save Changes</Button>
+                                </div>
+                            </form>
+                        </CardContent>
                     </Card>
                 </div>
 
-                {/* Sidebar: Public Link & Status */}
+                {/* Sidebar */}
                 <div className="space-y-6">
-                    <Card className={command.is_public ? "border-primary/50 shadow-sm" : "opacity-60"}>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Shareable Link</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="relative">
-                                <Input 
-                                    readOnly 
-                                    value={command.is_public ? publicUrl : "Link Disabled"} 
-                                    className="pr-24 font-mono text-[11px] bg-muted/50"
-                                />
-                                <div className="absolute right-1 top-1 flex gap-1">
-                                    <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="h-7 px-2" 
-                                        onClick={copyToClipboard}
-                                        disabled={!command.is_public}
-                                    >
-                                        {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-                                    </Button>
-                                    <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="h-7 px-2"
-                                        asChild
-                                        disabled={!command.is_public || isExpired}
-                                    >
-                                        <a href={publicUrl} target="_blank" rel="noreferrer">
-                                            <ExternalLink className="h-3.5 w-3.5" />
-                                        </a>
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="w-full text-xs gap-2" 
-                                onClick={rotateToken}
-                                disabled={processing}
-                            >
-                                <RefreshCw className={`h-3 w-3 ${processing ? 'animate-spin' : ''}`} />
-                                Regenerate Secret Token
-                            </Button>
-                            
-                            {!command.is_public && (
-                                <p className="text-[10px] text-center text-amber-600 font-medium">
-                                    Enable "Public Access" to activate this link.
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Session Info</CardTitle>
+                        <CardHeader>
+                            <CardTitle className="text-sm">Status Overview</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Parent Device</span>
-                                <Link href={`/devices/${command.device.uuid}`} className="font-medium text-primary hover:underline">
-                                    {command.device.name}
-                                </Link>
+                        <CardContent className="space-y-4 text-sm">
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Access</span>
+                                <Badge variant={command.is_public ? (isExpired ? "destructive" : "default") : "secondary"}>
+                                    {isExpired ? 'Expired' : (command.is_public ? 'Public' : 'Private')}
+                                </Badge>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center pt-1 border-t">
                                 <span className="text-muted-foreground">Created</span>
                                 <span className="font-medium">{command.created_at ? new Date(command.created_at).toLocaleDateString() : 'N/A'}</span>
                             </div>
@@ -300,16 +233,12 @@ export default function Show({ command, devices = [] }: Props) {
                         </CardContent>
                     </Card>
 
-                    <Card className="border-red-100 dark:border-red-900/30">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold text-red-600 uppercase tracking-wider">Danger Zone</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Button variant="destructive" size="sm" className="w-full" onClick={destroy}>
-                                Delete Access Link
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <DangerZone 
+                        title="Danger Zone" 
+                        description="Removing this session will instantly block all remote clients using these credentials."
+                        buttonText="Delete Access Link"
+                        onAction={destroy}
+                    />
                 </div>
             </div>
         </div>

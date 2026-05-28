@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import Heading from '@/components/heading';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import FlashMessages from '@/components/my-components/flash-messages';
 
 type Device = {
     uuid: string;
@@ -30,18 +31,14 @@ const breadcrumbs = [
     { title: 'Commands', href: '/commands' },
 ];
 
-Index.layout = {
-    breadcrumbs: [
-        { title: 'Commands', href: '/commands' },
-    ],
-};
-
 export default function Index({ commands }: Props) {
     return (
-        <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8">
+        <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
             <Head title="Access Links" />
 
             <Breadcrumbs breadcrumbs={breadcrumbs} />
+
+            <FlashMessages />
 
             <div className="flex items-center justify-between">
                 <Heading title="Access Links" description="Manage shared sessions and remote commands for your devices." />
@@ -51,19 +48,19 @@ export default function Index({ commands }: Props) {
             </div>
 
             {commands.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-                    <p className="text-muted-foreground">No active access links found.</p>
+                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm p-8">
+                    <p className="text-sm text-muted-foreground">No access links have been created.</p>
                 </div>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {commands.map((command) => {
                         const isExpired = command.expires_at ? new Date(command.expires_at) < new Date() : false;
-                        
+
                         return (
                             <Card key={command.uuid} className="flex flex-col">
-                                <CardHeader className="pb-2">
-                                    <div className="flex justify-between items-start">
-                                        <CardTitle className="text-base font-semibold truncate pr-2">
+                                <CardHeader className="flex flex-col space-y-1 pb-2">
+                                    <div className="flex items-start justify-between">
+                                        <CardTitle className="text-lg font-bold line-clamp-1" title={command.name}>
                                             {command.name}
                                         </CardTitle>
                                         <Badge variant={command.is_public ? (isExpired ? "destructive" : "default") : "secondary"}>
