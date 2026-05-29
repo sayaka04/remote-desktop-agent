@@ -39,41 +39,72 @@ export default function Index({ activeCommand, errors }: Props) {
     const [liveCommand, setLiveCommand] = useState<Command | undefined>(activeCommand);
     const [timestamp, setTimestamp] = useState(Date.now());
     const [pollIntervalMs, setPollIntervalMs] = useState(1000);
+    
     const lastActiveTime = useRef(Date.now());
+    const lastUpdateRef = useRef(activeCommand?.updated_at);
 
     // Update liveCommand if Inertia provides a new activeCommand (e.g., successful login)
     useEffect(() => {
         setLiveCommand(activeCommand);
+        if (activeCommand) lastUpdateRef.current = activeCommand.updated_at;
     }, [activeCommand]);
 
-    // FAST POLLING LOGIC
+    // SEQUENTIAL ASYNC POLLING LOGIC
     useEffect(() => {
-        if (!liveCommand) return; // Only poll if we have an active session
+        if (!liveCommand) return; 
 
-        const timerId = setInterval(() => {
-            const inactiveDurationMs = Date.now() - lastActiveTime.current;
-            if (inactiveDurationMs >= 60000) {
-                setPollIntervalMs(prev => Math.min(prev + 2000, 10000));
-            } else {
-                setPollIntervalMs(1000);
-            }
+        let isMounted = true;
+        let timeoutId: ReturnType<typeof setTimeout>;
+        let currentInterval = 1000;
 
-            // Hit the lightweight JSON endpoint instead of reloading the whole page
-            axios.get(`/client/commands/${liveCommand.uuid}/status`)
-                .then(res => {
-                    const statusData = res.data;
-                    if (statusData.updated_at !== liveCommand.updated_at) {
+    const poll = async () => {
+            if (!isMounted) return;
+
+            try {
+                const res = await axios.get(`/client/commands/${liveCommand.uuid}/status?_t=${Date.now()}`);
+                const statusData = res.data;
+                
+                if (statusData.updated_at !== lastUpdateRef.current) {
+                    const nextTimestamp = Date.now();
+                    const path = statusData.screenshot_path.startsWith('screenshots/') 
+                        ? statusData.screenshot_path 
+                        : `screenshots/${statusData.screenshot_path}`;
+                    const nextUrl = `/storage/${path}?t=${nextTimestamp}`;
+
+                    // --- PRELOADER FEATURE ---
+                    const img = new Image();
+                    img.onload = () => {
+                        if (!isMounted) return;
+                        lastUpdateRef.current = statusData.updated_at;
                         setLiveCommand(prev => prev ? { ...prev, ...statusData } : prev);
-                        setTimestamp(Date.now());
-                    }
-                })
-                .catch(err => {
-                     if(err.response?.status === 429) console.warn("Polling rate limited!");
-                });
-        }, pollIntervalMs);
+                        setTimestamp(nextTimestamp);
+                    };
+                    img.onerror = () => {
+                        lastUpdateRef.current = statusData.updated_at;
+                        setLiveCommand(prev => prev ? { ...prev, ...statusData } : prev);
+                    };
+                    img.src = nextUrl;
+                }
+            } catch (err: any) {
+                 if(err.response?.status === 429) console.warn("Polling rate limited!");
+            } finally {
+                if (isMounted) {
+                    const inactiveDurationMs = Date.now() - lastActiveTime.current;
+                    currentInterval = inactiveDurationMs >= 60000 ? Math.min(currentInterval + 2000, 10000) : 1000;
+                    setPollIntervalMs(currentInterval);
+                    timeoutId = setTimeout(poll, currentInterval);
+                }
+            }
+        };
 
-        return () => clearInterval(timerId);
-    }, [pollIntervalMs, liveCommand?.uuid, liveCommand?.updated_at]);
+        poll();
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timeoutId);
+        };
+    // CRITICAL: Do NOT put pollIntervalMs or liveCommand object here.
+    }, [liveCommand?.uuid]); 
 
     const resetPollingTimer = () => {
         lastActiveTime.current = Date.now();

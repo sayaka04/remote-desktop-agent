@@ -28,47 +28,80 @@ interface Props {
 }
 
 export default function Controller({ command }: Props) {
-    // Hold the live data separately from Inertia's page props
     const [liveCommand, setLiveCommand] = useState(command);
     const [timestamp, setTimestamp] = useState(Date.now());
     const [pollIntervalMs, setPollIntervalMs] = useState(1000);
+    
     const lastActiveTime = useRef(Date.now());
+    const lastUpdateRef = useRef(command.updated_at);
 
-    // FAST POLLING LOGIC
+    // SEQUENTIAL ASYNC POLLING LOGIC
     useEffect(() => {
-        const timerId = setInterval(() => {
-            const inactiveDurationMs = Date.now() - lastActiveTime.current;
-            if (inactiveDurationMs >= 60000) {
-                setPollIntervalMs(prev => Math.min(prev + 2000, 10000)); // slow down if idle
-            } else {
-                setPollIntervalMs(1000); // fast polling when active
-            }
-            
-            // Hit the lightweight JSON endpoint instead of reloading the whole page
-            axios.get(`/commands/${command.uuid}/status`)
-                .then(res => {
-                    const data = res.data;
-                    // Only update and trigger a re-render/image download if data actually changed
-                    if (data.updated_at !== liveCommand.updated_at) {
-                        setLiveCommand(prev => ({ ...prev, ...data }));
-                        setTimestamp(Date.now());
-                    }
-                })
-                .catch(err => {
-                    if(err.response?.status === 429) console.warn("Polling rate limited!");
-                });
+        let isMounted = true;
+        let timeoutId: ReturnType<typeof setTimeout>;
+        let currentInterval = 1000; // Local tracker to prevent closure staleness
 
-        }, pollIntervalMs);
-        
-        return () => clearInterval(timerId);
-    }, [pollIntervalMs, command.uuid, liveCommand.updated_at]);
+        const poll = async () => {
+            if (!isMounted) return;
+
+            try {
+                const res = await axios.get(`/commands/${command.uuid}/status?_t=${Date.now()}`);
+                const data = res.data;
+                
+                if (data.updated_at !== lastUpdateRef.current) {
+                    const nextTimestamp = Date.now();
+                    
+                    // Construct the URL of the new image
+                    const path = data.screenshot_path.startsWith('screenshots/') 
+                        ? data.screenshot_path 
+                        : `screenshots/${data.screenshot_path}`;
+                    const nextUrl = `/storage/${path}?t=${nextTimestamp}`;
+
+                    // --- PRELOADER FEATURE ---
+                    // Create a "virtual" image in memory to download the file before showing it
+                    const img = new Image();
+                    img.onload = () => {
+                        // This block only runs once the browser has the full image ready
+                        if (!isMounted) return;
+                        lastUpdateRef.current = data.updated_at;
+                        setLiveCommand(prev => ({ ...prev, ...data }));
+                        setTimestamp(nextTimestamp); // This now triggers an instant swap with no flash
+                    };
+                    img.onerror = () => {
+                        // If the image failed to load, we still update the timestamp so we don't get stuck
+                        lastUpdateRef.current = data.updated_at;
+                        setLiveCommand(prev => ({ ...prev, ...data }));
+                    };
+                    img.src = nextUrl; // This starts the background download
+                }
+            } catch (err: any) {
+                if (err.response?.status === 429) console.warn("Polling rate limited!");
+            } finally {
+                // Same finally block as before...
+                if (isMounted) {
+                    const inactiveDurationMs = Date.now() - lastActiveTime.current;
+                    currentInterval = inactiveDurationMs >= 60000 ? Math.min(currentInterval + 2000, 10000) : 1000;
+                    setPollIntervalMs(currentInterval);
+                    timeoutId = setTimeout(poll, currentInterval);
+                }
+            }
+        };
+        // Start the first request immediately
+        poll();
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timeoutId);
+        };
+    // CRITICAL: We only want this effect to run once per command. 
+    // Do NOT put pollIntervalMs in this array.
+    }, [command.uuid]); 
 
     const resetPollingTimer = () => {
         lastActiveTime.current = Date.now();
         setPollIntervalMs(1000);
     };
 
-    // Use liveCommand here, not the initial command prop
     const getImageUrl = () => {
         if (!liveCommand.screenshot_path) return null;
         
