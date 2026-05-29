@@ -1,6 +1,7 @@
     package remoteagent.handler;
 
     import com.google.gson.JsonArray;
+    import com.google.gson.JsonElement;
     import com.google.gson.JsonObject;
     import remoteagent.api.ApiController;
     import remoteagent.controller.WindowController;
@@ -66,24 +67,21 @@
             return payload != null ? Json.getArray(payload, "actions") : null;
         }
 
-        public void performActions(JsonArray actions, Robot robot){
-            actions.forEach(action -> {
-                JsonObject actionObj = action.getAsJsonObject();
-                System.out.println("Action Type: " + Json.getString(actionObj, "type"));
-                String type = Json.getString(actionObj, "type");
-                switch (Objects.requireNonNull(type)) {
-                    case "move_mouse" ->
-                            ActionHandler.handleMove(robot, Json.getInt(actionObj, "x"), Json.getInt(actionObj, "y"));
-                    case "click" ->
-                            ActionHandler.handleClick(robot, Json.getString(actionObj, "button"));
-                    case "type_text" ->
-                            ActionHandler.handleType(robot, Json.getString(actionObj, "text"));
-                    case "paste_text" ->
-                            ActionHandler.handlePaste(robot, Json.getString(actionObj, "text"));
-                    case "select_all" ->
-                            ActionHandler.handleCtrlA(robot);
+        private void performActions(JsonArray actions, Robot robot) {
+            if (actions == null || actions.isEmpty()) return;
+
+            windowController.writeToLog(LogUtil.LogType.INFO, "Executing " + actions.size() + " actions...");
+
+            for (JsonElement element : actions) {
+                if (element.isJsonObject()) {
+                    // Call our new dispatcher for every action in the array
+                    ActionHandler.execute(robot, element.getAsJsonObject());
+
+                    // Small delay between actions to simulate human speed
+                    // and prevent the OS from dropping events
+                    robot.delay(10);
                 }
-            });
+            }
         }
 
         private void performJob(Robot robot){
