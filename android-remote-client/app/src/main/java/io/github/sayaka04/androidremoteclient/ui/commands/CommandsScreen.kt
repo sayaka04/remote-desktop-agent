@@ -1,4 +1,4 @@
-package io.github.sayaka04.androidremoteclient.ui.devices
+package io.github.sayaka04.androidremoteclient.ui.commands
 
 import android.util.Log
 import androidx.compose.foundation.clickable
@@ -6,48 +6,47 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.sayaka04.androidremoteclient.api.Device
+import io.github.sayaka04.androidremoteclient.api.DeviceCommand
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DevicesScreen(
-    onDeviceClick: (String) -> Unit,
-    onLogoutClick: () -> Unit,
-    vm: DevicesViewModel = viewModel()
+fun CommandsScreen(
+    deviceUuid: String,
+    onCommandClick: (String) -> Unit,
+    onBackClick: () -> Unit,
+    vm: CommandsViewModel = viewModel()
 ) {
-    val devices by vm.devices.collectAsState()
+    val commands by vm.commands.collectAsState()
     val loading by vm.isLoading.collectAsState()
     val refreshing by vm.isRefreshing.collectAsState()
 
-    // Initial load
-    LaunchedEffect(Unit) {
-        Log.d("DevicesLog", "DevicesScreen Composed - Triggering initial fetchDevices()")
-        vm.fetchDevices()
+    LaunchedEffect(deviceUuid) {
+        Log.d("CommandsLog", "CommandsScreen Composed - Fetching commands for $deviceUuid")
+        vm.fetchCommands(deviceUuid)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Select Target Device") },
-                actions = {
+                title = { Text("Device Commands") },
+                navigationIcon = {
                     IconButton(onClick = {
-                        Log.d("DevicesLog", "Logout button clicked.")
-                        onLogoutClick()
+                        Log.d("CommandsLog", "Back button clicked.")
+                        onBackClick()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Logout")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -65,15 +64,15 @@ fun DevicesScreen(
                 }
 
                 // 2. Empty State
-                devices.isEmpty() -> {
-                    EmptyDeviceState(onRefresh = { vm.fetchDevices(isRefresh = true) })
+                commands.isEmpty() -> {
+                    EmptyCommandState(onRefresh = { vm.fetchCommands(deviceUuid, isRefresh = true) })
                 }
 
-                // 3. Populated List wrapped in the new PullToRefreshBox
+                // 3. Populated List wrapped in PullToRefreshBox
                 else -> {
                     PullToRefreshBox(
                         isRefreshing = refreshing,
-                        onRefresh = { vm.fetchDevices(isRefresh = true) },
+                        onRefresh = { vm.fetchCommands(deviceUuid, isRefresh = true) },
                         modifier = Modifier.fillMaxSize()
                     ) {
                         LazyColumn(
@@ -81,8 +80,8 @@ fun DevicesScreen(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(devices) { device ->
-                                DeviceCard(device = device, onClick = onDeviceClick)
+                            items(commands) { cmd ->
+                                CommandCard(cmd = cmd, onClick = onCommandClick)
                             }
                         }
                     }
@@ -97,16 +96,17 @@ fun DevicesScreen(
 // ==========================================
 
 @Composable
-private fun DeviceCard(
-    device: Device,
+private fun CommandCard(
+    cmd: DeviceCommand,
     onClick: (String) -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                val safeUuid = device.uuid ?: return@clickable
-                onClick(safeUuid)
+                val targetUuid = cmd.uuid ?: return@clickable
+                Log.d("CommandsLog", "User clicked command ID: $targetUuid")
+                onClick(targetUuid)
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -121,10 +121,9 @@ private fun DeviceCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Computer,
+                imageVector = Icons.Default.Terminal,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
-                // primary color adapts automatically now
                 tint = MaterialTheme.colorScheme.primary
             )
 
@@ -132,15 +131,14 @@ private fun DeviceCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = device.name ?: "Unknown Device",
+                    text = cmd.name ?: "Unnamed Command",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (device.isOnline) "Online" else "Offline",
+                    text = cmd.description ?: "No description provided",
                     style = MaterialTheme.typography.bodyMedium,
-                    // Keep green for online, but use standard error for offline
-                    color = if (device.isOnline) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -148,26 +146,26 @@ private fun DeviceCard(
 }
 
 @Composable
-private fun EmptyDeviceState(onRefresh: () -> Unit) {
+private fun EmptyCommandState(onRefresh: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Computer,
+            imageVector = Icons.Default.Terminal,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "No Devices Found",
+            text = "No Commands Available",
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Make sure your target machine is online and connected.",
+            text = "This device doesn't have any remote setups configured.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

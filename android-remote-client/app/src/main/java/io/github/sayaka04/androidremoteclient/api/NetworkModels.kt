@@ -3,7 +3,7 @@ package io.github.sayaka04.androidremoteclient.api
 import com.google.gson.annotations.SerializedName
 
 // ==========================================
-// NEW MODELS (Auth & Navigation)
+// Auth & Navigation Models
 // ==========================================
 data class LoginRequest(
     val email: String,
@@ -15,20 +15,21 @@ data class LoginResponse(
 )
 
 data class Device(
-    val id: String?,       // Made nullable to prevent parsing crashes
-    val name: String?,     // Made nullable to prevent parsing crashes
+    val uuid: String?,
+    val id: String?,
+    val name: String?,
     @SerializedName("is_online") val isOnline: Boolean = false
 )
 
 data class DeviceCommand(
-    val id: String?,       // Made nullable
-    val name: String?,     // Made nullable
+    val uuid: String?,
+    val id: String?,
+    val name: String?,
     val description: String? = null
 )
 
-
 // ==========================================
-// YOUR ORIGINAL MODELS (Untouched)
+// Command Payload Models
 // ==========================================
 data class CommandRequest(
     @SerializedName("client_payload") val clientPayload: ClientPayload
@@ -43,9 +44,16 @@ data class NetworkAction(
     @SerializedName("x") val x: Float? = null,
     @SerializedName("y") val y: Float? = null,
     @SerializedName("button") val button: String? = null,
-    @SerializedName("text") val text: String? = null
+    @SerializedName("text") val text: String? = null,
+    @SerializedName("key") val key: String? = null,
+    @SerializedName("axis") val axis: String? = null,
+    @SerializedName("amount") val amount: Int? = null,
+    @SerializedName("modifiers") val modifiers: List<String>? = null
 )
 
+// ==========================================
+// Host Response Models
+// ==========================================
 data class HostResponseWrapper(
     @SerializedName("data") val data: HostData?
 )
@@ -54,6 +62,6 @@ data class HostData(
     @SerializedName("command_id") val commandId: Int?,
     @SerializedName("has_client_request") val hasClientRequest: Boolean?,
     @SerializedName("has_host_response") val hasHostResponse: Boolean?,
-    @SerializedName("requested_at") val requestedAt: String?,
-    @SerializedName("last_updated_at") val lastUpdatedAt: String?
+    @SerializedName("screenshot_path") val screenshotPath: String?,
+    @SerializedName("updated_at") val updatedAt: String?
 )

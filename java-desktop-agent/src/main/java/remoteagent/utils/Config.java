@@ -23,7 +23,6 @@ public class Config {
 
     public static void openConfigFile() {
 
-        // IMPORTANT: use real file on disk (not classpath)
         file = Paths.get(CONFIG_FILE).toFile();
 
         if (!file.exists()) {

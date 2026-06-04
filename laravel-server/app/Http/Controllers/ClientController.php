@@ -33,14 +33,14 @@ class ClientController extends Controller
 
     public function status(Command $command)
     {
-        // Security: Ensure the public client is authenticated for THIS specific command
-        if (session('client_command_uuid') !== $command->uuid) {
+        // ✅ FIXED: Now properly uses 'client_uuid'
+        if (session('client_uuid') !== $command->uuid) {
             abort(403, 'Unauthorized session');
         }
 
         return response()->json([
             'screenshot_path' => $command->screenshot_path,
-            'updated_at' => $command->updated_at,
+            'updated_at'      => $command->updated_at,
         ]);
     }
 

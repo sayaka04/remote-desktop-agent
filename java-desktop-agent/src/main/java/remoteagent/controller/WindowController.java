@@ -48,7 +48,6 @@ public class WindowController {
         });
     }
 
-    // THIS IS THE MISSING PIECE:
     @FXML
     public void exitApp() {
         writeToLog(LogUtil.LogType.INFO, "Exiting!");

@@ -23,7 +23,6 @@ interface RemoteControlPanelProps {
 export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPolling }: RemoteControlPanelProps) {
     const [actions, setActions] = useState<Action[]>([]);
     const [textInput, setTextInput] = useState('');
-    const [isPanMode, setIsPanMode] = useState(false); 
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     
@@ -31,7 +30,11 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
     const [hkKey, setHkKey] = useState('');
     const [hkModifiers, setHkModifiers] = useState<string[]>([]);
     const [sendStatus, setSendStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+    
     const fullscreenRef = useRef<HTMLDivElement>(null);
+    
+    // 🔥 NEW: Tracks mouse down time and coordinates to differentiate between a click and a pan/drag
+    const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -69,6 +72,14 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
         });
     };
 
+    // 🔥 NEW: Sends a dummy payload to force Java Host to update the screenshot
+    const forceRefreshScreenshot = () => {
+        onResetPolling();
+        axios.post(postEndpoint, { 
+            payload: [{ type: 'scroll', axis: 'vertical', amount: 0 }] 
+        }).catch(err => console.error("Failed to force refresh:", err));
+    };
+
     const sendPayload = () => {
         onResetPolling();
         if (actions.length === 0) return;
@@ -91,22 +102,50 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
     return (
         <div ref={fullscreenRef} className={`relative flex-1 group bg-black rounded-xl overflow-hidden border-2 shadow-2xl transition-all duration-300 ${isFullscreen ? 'fixed inset-0 z-[100] rounded-none w-screen h-screen' : 'min-h-[500px] aspect-video'}`}>
             {imageUrl ? (
-                <TransformWrapper disabled={!isPanMode} initialScale={1} minScale={1} maxScale={5}>
+                // TransformWrapper disabled prop removed to permanently enable panning
+                <TransformWrapper initialScale={1} minScale={1} maxScale={5}>
                     <TransformComponent wrapperClass="w-full h-full">
-                        <div className={`relative w-full h-full flex items-center justify-center ${isPanMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
-                            onClick={(e) => {
-                                if(isPanMode) return;
+                        <div className="relative w-full h-full flex items-center justify-center cursor-crosshair active:cursor-grabbing"
+                            onPointerDown={(e) => {
+                                // Record the exact starting coordinates and time
+                                pointerStartRef.current = {
+                                    x: e.clientX,
+                                    y: e.clientY,
+                                    time: Date.now()
+                                };
+                            }}
+                            onPointerUp={(e) => {
+                                if (!pointerStartRef.current) return;
+
+                                const deltaX = e.clientX - pointerStartRef.current.x;
+                                const deltaY = e.clientY - pointerStartRef.current.y;
+                                const duration = Date.now() - pointerStartRef.current.time;
+                                
+                                // Calculate total physical pixel displacement
+                                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                                
+                                // Clear the ref tracking immediately
+                                pointerStartRef.current = null;
+
+                                // Strict validation: Must be a quick tap (<300ms) with almost zero dragging (<5px)
+                                if (distance > 5 || duration > 300) {
+                                    return; // It's a drag/pan gesture! Ignore it.
+                                }
+
+                                // --- Otherwise, it's a valid targeted selection click! ---
                                 const rect = e.currentTarget.getBoundingClientRect();
                                 queueAction({
                                     type: 'move_mouse',
                                     x: Number(((e.clientX - rect.left) / rect.width).toFixed(4)),
                                     y: Number(((e.clientY - rect.top) / rect.height).toFixed(4))
                                 });
-                                if(!isComposerOpen) setIsComposerOpen(true);
-                            }}>
-                            <img src={imageUrl} className="max-w-full max-h-full object-contain pointer-events-none select-none" alt="Remote Screen" />
+                                
+                                if (!isComposerOpen) setIsComposerOpen(true);
+                            }}
+                        >
+                            <img src={imageUrl} className="max-w-full max-h-full object-contain pointer-events-none select-none" alt="Remote Screen" draggable="false" />
                             {actions.map((a, i) => a.type === 'move_mouse' && (
-                                <div key={a.id} className="absolute w-6 h-6 -ml-3 -mt-3 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold shadow-lg" style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%` }}>{i+1}</div>
+                                <div key={a.id} className="absolute w-6 h-6 -ml-3 -mt-3 bg-red-500 rounded-full border-2 border-white text-[10px] text-white flex items-center justify-center font-bold shadow-lg" style={{ left: `${a.x! * 100}%`, top: `${a.y! * 100}%` }}>{i+1}</div>
                             ))}
                         </div>
                     </TransformComponent>
@@ -120,9 +159,15 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
 
             {/* Overlays */}
             <div className="absolute top-4 left-4 right-4 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity z-40">
-                <Badge variant="secondary" className="bg-black/60 text-white backdrop-blur-md">{isPanMode ? 'PANNING MODE' : 'TARGETING MODE'}</Badge>
+                <Badge variant="secondary" className="bg-black/60 text-white backdrop-blur-md flex items-center gap-2">
+                    <CmdIcon className="h-3 w-3" /> 
+                    <span>LIVE INTERACTION</span>
+                </Badge>
                 <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" className="bg-black/60 text-white backdrop-blur-md" onClick={() => setIsPanMode(!isPanMode)}>{isPanMode ? 'Switch to Target' : 'Switch to Pan'}</Button>
+                    {/* NEW: Refresh Button */}
+                    <Button size="sm" variant="secondary" className="bg-black/60 text-white backdrop-blur-md" onClick={forceRefreshScreenshot}>
+                        <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+                    </Button>
                     <Button size="sm" variant="secondary" className="bg-black/60 text-white backdrop-blur-md" onClick={toggleFullscreen}>
                         {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                     </Button>
@@ -151,11 +196,11 @@ export default function RemoteControlPanel({ postEndpoint, imageUrl, onResetPoll
                                         <Badge className="w-4 h-4 p-0 flex items-center justify-center text-[9px]">{i+1}</Badge>
                                         <span className="font-bold uppercase text-primary">{a.type.replace('_', ' ')}:</span>
                                         <span className="truncate">
-                                            {a.type === 'move_mouse' && `[${Math.round(a.x * 100)}%, ${Math.round(a.y * 100)}%]` }
+                                            {a.type === 'move_mouse' && `[${Math.round(a.x! * 100)}%, ${Math.round(a.y! * 100)}%]` }
                                             {a.type === 'click' && `${a.button} button`}
                                             {a.type === 'type_text' && `"${a.text}"`}
-                                            {a.type === 'key_press' && a.key.toUpperCase()}
-                                            {a.type === 'hotkey' && `${a.modifiers.join('+')}+${a.key}`.toUpperCase()}
+                                            {a.type === 'key_press' && a.key?.toUpperCase()}
+                                            {a.type === 'hotkey' && `${a.modifiers?.join('+')}+${a.key}`.toUpperCase()}
                                             {a.type === 'scroll' && `${a.axis} ${a.amount}`}
                                             {a.type === 'key_down' && `Hold ${a.key}`}
                                             {a.type === 'key_up' && `Release ${a.key}`}

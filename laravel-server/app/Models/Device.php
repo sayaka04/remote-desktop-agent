@@ -24,6 +24,14 @@ class Device extends Model
     ];
 
     /**
+     * Use UUID for route model binding.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>

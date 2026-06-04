@@ -74,12 +74,17 @@ class CommandController extends Controller
             'client_payload.actions.*.button' => 'string|in:left,right,middle|nullable',
             'client_payload.actions.*.amount' => 'integer|nullable',
             'client_payload.actions.*.text' => 'string|nullable',
+
+            // 🔥 ADD THESE RULES TO STOP LARAVEL FROM STRIPPING THEM OUT:
+            'client_payload.actions.*.key' => 'string|nullable',
+            'client_payload.actions.*.modifiers' => 'array|nullable',
+            'client_payload.actions.*.modifiers.*' => 'string',
         ]);
 
         // 2. Update the existing command with the payload and FLIP the flag to true
         $command->update([
             'client_payload'     => $validated['client_payload'],
-            'has_client_request' => true, // TRUE! Now the Java Host will see it and execute it.
+            'has_client_request' => true,
         ]);
 
         // 3. Return the formatted resource

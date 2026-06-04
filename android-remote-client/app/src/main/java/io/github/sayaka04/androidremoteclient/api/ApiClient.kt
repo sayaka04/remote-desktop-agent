@@ -10,7 +10,7 @@ object ApiClient {
     private var token: String? = null
     private var retrofit: Retrofit? = null
 
-    // Required for your PreferenceDatastoreUtil references
+    // Required for PreferenceDatastoreUtil references
     fun setApiBaseUrl(newUrl: String) {
         val formattedUrl = if (newUrl.endsWith("/")) newUrl else "$newUrl/"
         if (this.baseUrl != formattedUrl) {
@@ -22,7 +22,6 @@ object ApiClient {
         }
     }
 
-    // Required for your Login logic references
     fun setToken(newToken: String?) {
         if (this.token != newToken) {
             this.token = newToken
@@ -55,6 +54,6 @@ object ApiClient {
                 .build().also { retrofit = it }
         }
     }
-
+    
     val service: RemoteApiService get() = getRetrofit().create(RemoteApiService::class.java)
 }

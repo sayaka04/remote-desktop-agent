@@ -8,7 +8,6 @@ import retrofit2.http.Path
 
 interface RemoteApiService {
 
-    // --- NEW ENDPOINTS ---
     @POST("login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
@@ -18,18 +17,15 @@ interface RemoteApiService {
     @GET("devices/{deviceId}/commands")
     suspend fun getCommands(@Path("deviceId") deviceId: String): Response<List<DeviceCommand>>
 
-
-    // --- YOUR ORIGINAL ENDPOINTS ---
+    // Restored back to your original, working endpoint and wrapper
     @POST("commands/{deviceId}/request")
     suspend fun sendCommandRequest(
         @Path("deviceId") deviceId: String,
         @Body payload: CommandRequest
     ): Response<Unit>
 
-
     @GET("commands/{deviceId}")
     suspend fun requestHostData(
         @Path("deviceId") deviceId: String
     ): Response<HostResponseWrapper>
-
 }

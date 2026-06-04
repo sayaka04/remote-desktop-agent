@@ -1,4 +1,4 @@
-package io.github.sayaka04.androidremoteclient.ui.devices
+package io.github.sayaka04.androidremoteclient.ui.commands
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -14,13 +14,24 @@ class CommandsViewModel : ViewModel() {
     private val _commands = MutableStateFlow<List<DeviceCommand>>(emptyList())
     val commands: StateFlow<List<DeviceCommand>> = _commands.asStateFlow()
 
+    // Used for the initial page load
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    fun fetchCommands(deviceId: String) {
+    // Used for pull-to-refresh or manual retries
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    fun fetchCommands(deviceId: String, isRefresh: Boolean = false) {
         viewModelScope.launch {
-            Log.d("CommandsLog", "--- Starting fetchCommands for device: $deviceId ---")
-            _isLoading.value = true
+            Log.d("CommandsLog", "--- Starting fetchCommands for device: $deviceId (isRefresh=$isRefresh) ---")
+
+            if (isRefresh) {
+                _isRefreshing.value = true
+            } else {
+                _isLoading.value = true
+            }
+
             try {
                 val response = ApiClient.service.getCommands(deviceId)
                 Log.d("CommandsLog", "Response Code: ${response.code()}")
@@ -37,6 +48,7 @@ class CommandsViewModel : ViewModel() {
                 e.printStackTrace()
             } finally {
                 _isLoading.value = false
+                _isRefreshing.value = false
                 Log.d("CommandsLog", "--- Finished fetchCommands ---")
             }
         }

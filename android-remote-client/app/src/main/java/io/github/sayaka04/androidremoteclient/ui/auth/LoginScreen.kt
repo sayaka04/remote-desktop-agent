@@ -1,27 +1,11 @@
 package io.github.sayaka04.androidremoteclient.ui.auth
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import android.content.Context
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -36,79 +20,124 @@ fun LoginScreen(
     val state by vm.state.collectAsState()
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Auto-login check on launch
     LaunchedEffect(Unit) {
         vm.checkAutoLogin(context, onLoginSuccess)
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column {
-            TabRow(selectedTabIndex = selectedTab) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Login") })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Server") })
-            }
+    LaunchedEffect(state.error) {
+        state.error?.let { errorMessage ->
+            snackbarHostState.showSnackbar(errorMessage)
+            vm.clearError()
+        }
+    }
 
-            Column(modifier = Modifier.padding(24.dp)) {
-                if (selectedTab == 0) {
-                    // Login Form
-                    OutlinedTextField(
-                        value = state.email,
-                        onValueChange = vm::updateEmail,
-                        label = { Text("Email") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.password,
-                        onValueChange = vm::updatePassword,
-                        label = { Text("Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    if (state.error != null) {
-                        Text(
-                            text = state.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            // SHADCN FIX: Wrapped in a flat, bordered card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(0.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column {
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
+                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Login") })
+                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Server") })
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = { vm.performLogin(context, onLoginSuccess) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isLoading
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    Box(modifier = Modifier.padding(24.dp)) {
+                        if (selectedTab == 0) {
+                            LoginForm(state = state, vm = vm, context = context, onLoginSuccess = onLoginSuccess)
                         } else {
-                            Text("Login")
+                            ServerSettingsForm(state = state, vm = vm, context = context) {
+                                selectedTab = 0
+                            }
                         }
-                    }
-                } else {
-                    // Server Settings Form
-                    OutlinedTextField(
-                        value = state.baseUrl,
-                        onValueChange = vm::updateBaseUrl,
-                        label = { Text("Base URL") },
-                        placeholder = { Text("http://10.26.140.122/api/") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            vm.saveUrl(context)
-                            selectedTab = 0
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Save & Return")
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LoginForm(
+    state: LoginState,
+    vm: LoginViewModel,
+    context: Context,
+    onLoginSuccess: () -> Unit
+) {
+    Column {
+        OutlinedTextField(
+            value = state.email,
+            onValueChange = vm::updateEmail,
+            label = { Text("Email") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = state.password,
+            onValueChange = vm::updatePassword,
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = { vm.performLogin(context, onLoginSuccess) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.isLoading
+        ) {
+            if (state.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text("Login")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServerSettingsForm(
+    state: LoginState,
+    vm: LoginViewModel,
+    context: Context,
+    onSaveSuccess: () -> Unit
+) {
+    Column {
+        OutlinedTextField(
+            value = state.baseUrl,
+            onValueChange = vm::updateBaseUrl,
+            label = { Text("Base URL") },
+            placeholder = { Text("http://10.26.140.122/api/") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = {
+                vm.saveUrl(context)
+                onSaveSuccess()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Save & Return")
         }
     }
 }
