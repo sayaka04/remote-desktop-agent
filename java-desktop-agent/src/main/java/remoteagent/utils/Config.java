@@ -50,7 +50,7 @@ public class Config {
 
             properties.load(input);
 
-            System.out.println("Config reloaded from: " + file.getAbsolutePath());
+            //  System.out.println("Config reloaded from: " + file.getAbsolutePath());
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to reload config", e);

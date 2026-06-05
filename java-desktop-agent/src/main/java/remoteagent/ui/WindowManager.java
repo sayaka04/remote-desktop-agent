@@ -3,11 +3,11 @@ package remoteagent.ui;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import remoteagent.controller.WindowController;
 import remoteagent.handler.JobHandler;
 import remoteagent.utils.LogUtil;
-
 import java.net.URL;
 
 public class WindowManager {
@@ -34,6 +34,14 @@ public class WindowManager {
 
             stage.setScene(new Scene(root, 800, 600));
             stage.setTitle("Remote Agent");
+
+            // MODIFIED: Load image from resources instead of local file system
+            URL iconUrl = getClass().getResource("/pc1.png");
+            if (iconUrl != null) {
+                stage.getIcons().add(new Image(iconUrl.toExternalForm()));
+            } else {
+                System.err.println("Window icon image not found in resources.");
+            }
 
             stage.setOnCloseRequest(e -> {
                 e.consume();

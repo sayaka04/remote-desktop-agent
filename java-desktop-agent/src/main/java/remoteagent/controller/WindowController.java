@@ -17,7 +17,7 @@ public class WindowController {
 
     @FXML
     public void initialize() {
-        System.out.println("Controller loaded!");
+//        System.out.println("Controller loaded!");
         writeToLog(LogUtil.LogType.INFO, "System ready and Controller linked!");
     }
 
@@ -33,7 +33,7 @@ public class WindowController {
             logArea.appendText(LogUtil.format(type, message));
 
             int totalRows = logArea.getParagraphs().size();
-            System.out.println("Total rows: " + totalRows);
+//            System.out.println("Total rows: " + totalRows);
             if (totalRows > maxLogLines) {
                 // --- 1. Get every single piece of text currently in the box
                 String allText = logArea.getText();
