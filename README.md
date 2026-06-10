@@ -103,9 +103,9 @@ The codebases are modular and split into separate sub-project directories:
 
 **All granular technical design documentation and manual guides have been placed inside the root `/doc` folder.** Review these markdown references for specifics regarding schemas, protocols, or local compilation pipelines:
 
-1. **[`/doc/API_DOCUMENTATION.md`](https://www.google.com/search?q=doc/API_DOCUMENTATION.md):** Detailed references for every backend REST route. Outlines request/response body schemas, Laravel Sanctum bearer token handshakes, and strict API rate-limiting parameters.
-2. **[`/doc/WEB_DOCUMENTATION.md`](https://www.google.com/search?q=doc/WEB_DOCUMENTATION.md):** Specifications for the stateful web systems. Contains Inertia.js view sharing rules, public portal encrypted cookie variables, and token rotation hooks designed to invalidate temporary links instantly.
-3. **[`/doc/DEV_DOCUMENTATION.md`](https://www.google.com/search?q=doc/DEV_DOCUMENTATION.md):** Manuals for project developers. Documents minimum workspace environments, IDE configurations for IntelliJ IDEA and Android Studio, asynchronous execution rules (Kotlin Coroutines, StateFlow streams), and compiler steps for standalone binary packaging.
+1. **[`/doc/API_DOCUMENTATION.md`](https://github.com/sayaka04/remote-desktop-agent/blob/main/doc/laravel-server/API_DOCUMENTATION.md):** Detailed references for every backend REST route. Outlines request/response body schemas, Laravel Sanctum bearer token handshakes, and strict API rate-limiting parameters.
+2. **[`/doc/WEB_DOCUMENTATION.md`](https://github.com/sayaka04/remote-desktop-agent/blob/main/doc/laravel-server/WEB_DOCUMENTATION.md):** Specifications for the stateful web systems. Contains Inertia.js view sharing rules, public portal encrypted cookie variables, and token rotation hooks designed to invalidate temporary links instantly.
+3. **[`/doc`](https://github.com/sayaka04/remote-desktop-agent/tree/main/doc):** Manuals for project developers. Documents minimum workspace environments, IDE configurations for IntelliJ IDEA and Android Studio, asynchronous execution rules (Kotlin Coroutines, StateFlow streams), and compiler steps for standalone binary packaging.
 
 ---
 
