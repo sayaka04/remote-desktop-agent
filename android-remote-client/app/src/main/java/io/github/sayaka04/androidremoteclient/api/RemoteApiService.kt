@@ -17,7 +17,6 @@ interface RemoteApiService {
     @GET("devices/{deviceId}/commands")
     suspend fun getCommands(@Path("deviceId") deviceId: String): Response<List<DeviceCommand>>
 
-    // Restored back to your original, working endpoint and wrapper
     @POST("commands/{deviceId}/request")
     suspend fun sendCommandRequest(
         @Path("deviceId") deviceId: String,
