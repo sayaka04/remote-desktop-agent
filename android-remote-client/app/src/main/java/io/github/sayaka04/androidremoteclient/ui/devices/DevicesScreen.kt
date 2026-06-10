@@ -2,29 +2,24 @@ package io.github.sayaka04.androidremoteclient.ui.devices
 
 import android.util.Log
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.sayaka04.androidremoteclient.api.Device
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +30,11 @@ fun DevicesScreen(
 ) {
     val devices by vm.devices.collectAsState()
     val loading by vm.isLoading.collectAsState()
+    val refreshing by vm.isRefreshing.collectAsState()
 
+    // Initial load
     LaunchedEffect(Unit) {
-        Log.d("DevicesLog", "DevicesScreen Composed - Triggering fetchDevices()")
+        Log.d("DevicesLog", "DevicesScreen Composed - Triggering initial fetchDevices()")
         vm.fetchDevices()
     }
 
@@ -56,28 +53,131 @@ fun DevicesScreen(
             )
         }
     ) { padding ->
-        if (loading) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(Modifier.padding(padding).fillMaxSize()) {
-                items(devices) { device ->
-                    ListItem(
-                        // PREVENTS THE CRASH
-                        headlineContent = { Text(device.name ?: "Unknown Device") },
-                        supportingContent = {
-                            Text(if (device.isOnline) "Status: Online" else "Status: Offline")
-                        },
-                        modifier = Modifier.clickable {
-                            val safeId = device.id ?: return@clickable
-                            Log.d("DevicesLog", "User clicked on device ID: $safeId")
-                            onDeviceClick(safeId)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                // 1. Initial Loading State
+                loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+
+                // 2. Empty State
+                devices.isEmpty() -> {
+                    EmptyDeviceState(onRefresh = { vm.fetchDevices(isRefresh = true) })
+                }
+
+                // 3. Populated List wrapped in the new PullToRefreshBox
+                else -> {
+                    PullToRefreshBox(
+                        isRefreshing = refreshing,
+                        onRefresh = { vm.fetchDevices(isRefresh = true) },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(devices) { device ->
+                                DeviceCard(device = device, onClick = onDeviceClick)
+                            }
                         }
-                    )
-                    HorizontalDivider()
+                    }
                 }
             }
+        }
+    }
+}
+
+// ==========================================
+// COMPONENTS
+// ==========================================
+
+@Composable
+private fun DeviceCard(
+    device: Device,
+    onClick: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                val safeUuid = device.uuid ?: return@clickable
+                onClick(safeUuid)
+            },
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Computer,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                // primary color adapts automatically now
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = device.name ?: "Unknown Device",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = if (device.isOnline) "Online" else "Offline",
+                    style = MaterialTheme.typography.bodyMedium,
+                    // Keep green for online, but use standard error for offline
+                    color = if (device.isOnline) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDeviceState(onRefresh: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Computer,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "No Devices Found",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Make sure your target machine is online and connected.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRefresh) {
+            Icon(Icons.Default.Refresh, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Refresh")
         }
     }
 }

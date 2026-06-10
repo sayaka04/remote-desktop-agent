@@ -1,6 +1,7 @@
 plugins {
     id("java")
     id("application")
+    id("com.gradleup.shadow") version "8.3.0"
 }
 
 group = "remoteagent"
@@ -37,7 +38,7 @@ dependencies {
 }
 
 configure<JavaApplication> {
-    mainClass.set("remoteagent.Main")
+    mainClass.set("remoteagent.Launcher")
 }
 
 tasks.withType<JavaExec> {

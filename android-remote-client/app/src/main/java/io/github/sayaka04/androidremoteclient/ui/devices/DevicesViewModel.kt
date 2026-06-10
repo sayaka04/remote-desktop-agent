@@ -14,13 +14,24 @@ class DevicesViewModel : ViewModel() {
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices.asStateFlow()
 
+    // Used for the initial page load
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    fun fetchDevices() {
+    // Used for pull-to-refresh or manual retries
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    fun fetchDevices(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            Log.d("DevicesLog", "--- Starting fetchDevices() ---")
-            _isLoading.value = true
+            Log.d("DevicesLog", "--- Starting fetchDevices(isRefresh=$isRefresh) ---")
+
+            if (isRefresh) {
+                _isRefreshing.value = true
+            } else {
+                _isLoading.value = true
+            }
+
             try {
                 val response = ApiClient.service.getDevices()
                 Log.d("DevicesLog", "Response Code: ${response.code()}")
@@ -37,6 +48,7 @@ class DevicesViewModel : ViewModel() {
                 e.printStackTrace()
             } finally {
                 _isLoading.value = false
+                _isRefreshing.value = false
                 Log.d("DevicesLog", "--- Finished fetchDevices() ---")
             }
         }

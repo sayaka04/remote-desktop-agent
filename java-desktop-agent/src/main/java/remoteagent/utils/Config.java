@@ -23,7 +23,6 @@ public class Config {
 
     public static void openConfigFile() {
 
-        // IMPORTANT: use real file on disk (not classpath)
         file = Paths.get(CONFIG_FILE).toFile();
 
         if (!file.exists()) {
@@ -51,7 +50,7 @@ public class Config {
 
             properties.load(input);
 
-            System.out.println("Config reloaded from: " + file.getAbsolutePath());
+            //  System.out.println("Config reloaded from: " + file.getAbsolutePath());
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to reload config", e);

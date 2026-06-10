@@ -6,6 +6,7 @@ import remoteagent.handler.JobHandler;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.net.URL; // ADDED THIS IMPORT
 
 public class TrayManager {
 
@@ -25,9 +26,14 @@ public class TrayManager {
         try {
             SystemTray tray = SystemTray.getSystemTray();
 
-            Image image = Toolkit.getDefaultToolkit().createImage("pc1.jpg");
+            // MODIFIED: Load image from resources
+            URL imageURL = getClass().getResource("/pc1.png");
+            Image image = null;
 
-            if (image == null) {
+            if (imageURL != null) {
+                image = Toolkit.getDefaultToolkit().getImage(imageURL);
+            } else {
+                System.err.println("Tray icon image not found in resources. Using fallback blank image.");
                 image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB);
             }
 
@@ -72,6 +78,7 @@ public class TrayManager {
 
         TrayIcon trayIcon = new TrayIcon(image, "Remote Agent", menu);
         trayIcon.setImageAutoSize(true);
+
         return trayIcon;
     }
 }

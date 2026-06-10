@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import io.github.sayaka04.androidremoteclient.api.ApiClient
-import io.github.sayaka04.androidremoteclient.ui.client.ClientViewModel
+//import io.github.sayaka04.androidremoteclient.ui.client.ClientViewModel
 import kotlinx.coroutines.flow.first
 
 private val Context.dataStore by preferencesDataStore(name = "local")
@@ -66,85 +66,4 @@ object PreferenceDatastoreUtil {
             }
         }
     }
-
-
-    suspend fun setClientDetails(
-        context: Context,
-        clientViewModel: ClientViewModel
-    ) {
-
-        val apiBaseUrl = getString(context, "apiBaseURL")
-        val apiDeviceId = getString(context, "apiDeviceId")
-        val apiCommandId = getString(context, "apiCommandId")
-
-        clientViewModel.updateApiBaseUrl(apiBaseUrl ?: "")
-        clientViewModel.updateApiDeviceId(apiDeviceId ?: "")
-        clientViewModel.updateApiCommandId(apiCommandId ?: "")
-
-        ApiClient.setApiBaseUrl(apiBaseUrl.toString())
-
-    }
-
-
-
-    /*
-=========================================
-SAMPLE USAGE
-=========================================
-
-lifecycleScope.launch {
-
-.launch {
-
-    // ---------------------------------
-    // Save String
-    // ---------------------------------
-    PreferenceDatastoreUtil.saveString(
-        context = applicationContext,
-        key = "ip",
-        value = "192.168.1.1"
-    )
-
-    // ---------------------------------
-    // Get String
-    // ---------------------------------
-    val ip = PreferenceDatastoreUtil.getString(
-        context = applicationContext,
-        key = "ip"
-    )
-
-    Log.d("DataStore", "IP: $ip")
-
-    // ---------------------------------
-    // Remove Single Key
-    // ---------------------------------
-    PreferenceDatastoreUtil.remove(
-        context = applicationContext,
-        key = "ip"
-    )
-
-    // ---------------------------------
-    // Fetch All
-    // ---------------------------------
-    val allData = PreferenceDatastoreUtil.fetchAll(
-        context = applicationContext
-    )
-
-    Log.d("DataStore", allData)
-
-    // Example Output:
-    //
-    // username = admin
-    // theme = dark
-    // token = abc123
-
-    // ---------------------------------
-    // Clear Everything
-    // ---------------------------------
-    PreferenceDatastoreUtil.clear(
-        context = applicationContext
-    )
-}
-
-*/
 }

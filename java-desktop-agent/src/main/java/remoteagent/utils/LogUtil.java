@@ -20,7 +20,7 @@ public class LogUtil {
      * Formats a log message with the current date, time, and log type.
      * * @param type    The type of log (e.g., LogType.INFO)
      * @param message The message to display
-     * @return A formatted string ready to be appended to your TextArea
+     * @return A formatted string ready to be appended TextArea
      */
     public static String format(LogType type, String message) {
         String timestamp = LocalDateTime.now().format(FORMATTER);

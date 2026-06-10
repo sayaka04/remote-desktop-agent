@@ -15,14 +15,14 @@ Route::inertia('/', 'welcome', [
 // PUBLIC ROUTES (No Login Required)
 // ==========================================
 // Allow normal browsing (60 requests per minute)
-Route::middleware('throttle:20,1')->group(function () {
+Route::middleware('throttle:30,1')->group(function () {
     Route::get('/client', [ClientController::class, 'index'])->name('client.index');
     Route::post('/client/logout', [ClientController::class, 'logout'])->name('client.logout');
 });
 
 // STRICT Rate Limiting for Authentication (Prevent Brute-Force Password/Token guessing)
 // Only allow 5 attempts per minute per IP.
-Route::middleware('throttle:5,1')->group(function () {
+Route::middleware('throttle:100,1')->group(function () {
     Route::post('/client/authenticate', [ClientController::class, 'authenticate'])->name('client.authenticate');
 });
 

@@ -19,12 +19,12 @@ public class ApiController {
 
     public JsonObject requestData() {
         try {
-            String response = ApiClient.get("/commands/" + Config.get("api.device_id"));
+            String response = ApiClient.get("/commands/" + Config.get("api.command_id"));
             JsonObject json = Json.parseObject(response);
             windowController.writeToLog(LogUtil.LogType.INFO, "Request Data: " + response);
 
             // --- TODO: Add debug mode
-//            System.out.println(Config.get("api.device_id"));
+//            System.out.println(Config.get("api.command_id"));
 //            System.out.println(Json.toJson(json));
 
             return Json.getObject(json, "data");
@@ -32,7 +32,7 @@ public class ApiController {
         } catch (Exception e) {
 
             // --- TODO: Add debug mode
-            System.out.println("Failed to request data: " + e.getMessage());
+//            System.out.println("Failed to request data: " + e.getMessage());
 
             return null;
         }
@@ -48,7 +48,7 @@ public class ApiController {
                             "image/png");
 
             String response = ApiClient.post(
-                    "/commands/" + Config.get("api.device_id") + "/response", data
+                    "/commands/" + Config.get("api.command_id") + "/response", data
             );
 
             windowController.writeToLog(LogUtil.LogType.INFO, "Response: " + response);
@@ -56,7 +56,7 @@ public class ApiController {
 
             return response;
         } catch (IOException e) {
-            System.out.println("Failed to respond data: " + e.getMessage());
+//            System.out.println("Failed to respond data: " + e.getMessage());
 
             return null;        }
     }

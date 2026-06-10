@@ -96,7 +96,6 @@ public final class ActionHandler {
     }
 
     private static void handleScroll(Robot robot, JsonObject action) {
-        // 'amount' usually comes as positive for down, negative for up
         int amount = Json.getInt(action, "amount");
         robot.mouseWheel(amount);
     }
@@ -104,8 +103,6 @@ public final class ActionHandler {
     private static void handleType(Robot robot, String text) {
         if (text == null || text.isEmpty()) return;
 
-        // Using Clipboard for 'type_text' is 100% more reliable than individual key presses
-        // as it handles symbols (@, #, !, etc.) regardless of keyboard layout.
         StringSelection selection = new StringSelection(text);
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         clipboard.setContents(selection, null);
